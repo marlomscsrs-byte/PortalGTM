@@ -14,7 +14,7 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: ADMIN_ID
-        sync: false
+        value: "284"
       - key: ADMIN_NAME
         value: Administrador GTM
       - key: ADMIN_EMAIL
