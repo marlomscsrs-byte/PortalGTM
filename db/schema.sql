@@ -25,3 +25,21 @@ CREATE TABLE IF NOT EXISTS audit_log(
  action VARCHAR(100) NOT NULL,target_passport_id VARCHAR(32),details JSONB NOT NULL DEFAULT '{}'::jsonb,
  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS operational_records(
+ id BIGSERIAL PRIMARY KEY,
+ reporter_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+ reporter_passport_id VARCHAR(32) NOT NULL,
+ reporter_name VARCHAR(120) NOT NULL,
+ record_type VARCHAR(40) NOT NULL CHECK(record_type IN ('QRU','Prisão')),
+ qru VARCHAR(100) NOT NULL,
+ occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ description TEXT NOT NULL,
+ involved TEXT NOT NULL DEFAULT '',
+ vehicle TEXT NOT NULL DEFAULT '',
+ photo_url TEXT NOT NULL DEFAULT '',
+ discord_status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
+ discord_error TEXT,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_operational_records_created ON operational_records(created_at DESC);

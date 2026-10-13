@@ -16,6 +16,15 @@ function publicUser(r){return {id:r.id,passportId:r.passport_id,fullName:r.full_
 async function audit(client,user,action,target,details={}){await client.query("INSERT INTO audit_log(actor_user_id,action,target_passport_id,details) VALUES($1,$2,$3,$4)",[user||null,action,target||null,JSON.stringify(details)])}
 async function bootstrap(){
  await pool.query("CREATE TABLE IF NOT EXISTS user_sessions(sid varchar NOT NULL PRIMARY KEY,sess json NOT NULL,expire timestamp(6) NOT NULL); CREATE INDEX IF NOT EXISTS idx_session_expire ON user_sessions(expire)");
+ await pool.query(`CREATE TABLE IF NOT EXISTS operational_records(
+  id BIGSERIAL PRIMARY KEY, reporter_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  reporter_passport_id VARCHAR(32) NOT NULL, reporter_name VARCHAR(120) NOT NULL,
+  record_type VARCHAR(40) NOT NULL, qru VARCHAR(100) NOT NULL, occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  description TEXT NOT NULL, involved TEXT NOT NULL DEFAULT '', vehicle TEXT NOT NULL DEFAULT '',
+  photo_url TEXT NOT NULL DEFAULT '', discord_status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
+  discord_error TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+ )`);
+ await pool.query("CREATE INDEX IF NOT EXISTS idx_operational_records_created ON operational_records(created_at DESC)");
  const id=clean(process.env.ADMIN_ID),name=clean(process.env.ADMIN_NAME||"Administrador GTM"),password=clean(process.env.ADMIN_PASSWORD);
  if(!id||!password||password.startsWith("troque-")){console.warn("Configure ADMIN_ID e ADMIN_PASSWORD forte para criar o primeiro administrador.");return}
  const exists=await pool.query("SELECT id FROM users WHERE passport_id=$1",[id]);if(exists.rowCount)return;
@@ -55,6 +64,52 @@ app.get("/api/people",auth,async(q,s,n)=>{try{
  const term="%"+clean(q.query.q)+"%",status=clean(q.query.status);
  const r=await pool.query(`SELECT id,passport_id,full_name,badge,rank,role,status,entry_date FROM users WHERE access_status='APROVADO' AND (full_name ILIKE $1 OR passport_id ILIKE $1 OR role ILIKE $1) AND ($2='' OR status=$2) ORDER BY CASE role WHEN 'Comandante' THEN 1 WHEN 'Subcomandante' THEN 2 WHEN 'Supervisor' THEN 3 WHEN 'Capitão' THEN 4 WHEN 'Piloto Veterano' THEN 5 WHEN 'Piloto Oficial' THEN 6 WHEN 'Piloto' THEN 7 WHEN 'Probatório' THEN 8 ELSE 9 END,full_name`,[term,status]);s.json({people:r.rows});
 }catch(e){n(e)}});
+
+app.get("/api/operational-records",auth,async(q,s,n)=>{try{
+ const r=await pool.query("SELECT id,reporter_passport_id,reporter_name,record_type,qru,occurred_at,description,involved,vehicle,photo_url,discord_status,created_at FROM operational_records ORDER BY created_at DESC LIMIT 100");
+ s.json({records:r.rows});
+}catch(e){n(e)}});
+app.post("/api/operational-records",auth,async(q,s,n)=>{const c=await pool.connect();let record;
+ try{
+  const type=clean(q.body.recordType),qru=clean(q.body.qru),description=clean(q.body.description),involved=clean(q.body.involved),vehicle=clean(q.body.vehicle),photoUrl=clean(q.body.photoUrl);
+  if(!["QRU","Prisão"].includes(type))throw fail(400,"Tipo de registro inválido.");
+  if(qru.length<2||qru.length>100)throw fail(400,"Informe a QRU/ocorrência (até 100 caracteres).");
+  if(description.length<5||description.length>4000)throw fail(400,"A descrição deve ter entre 5 e 4.000 caracteres.");
+  if(involved.length>1500||vehicle.length>500)throw fail(400,"Os campos de envolvidos ou veículos excederam o limite.");
+  if(photoUrl && (!/^https:\/\/\S+$/i.test(photoUrl)||photoUrl.length>1000))throw fail(400,"O link da imagem deve ser uma URL HTTPS válida.");
+  await c.query("BEGIN");
+  const saved=await c.query(`INSERT INTO operational_records(reporter_user_id,reporter_passport_id,reporter_name,record_type,qru,description,involved,vehicle,photo_url)
+   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+   [q.session.user.id,q.session.user.passportId,q.session.user.fullName,type,qru,description,involved,vehicle,photoUrl]);
+  record=saved.rows[0];
+  await audit(c,q.session.user.id,"REGISTRO_OPERACIONAL",q.session.user.passportId,{recordId:record.id,recordType:type,qru});
+  await c.query("COMMIT");
+ }catch(e){await c.query("ROLLBACK").catch(()=>{});c.release();return n(e)}
+ c.release();
+ const webhook=clean(process.env.DISCORD_WEBHOOK_QRU);
+ if(!webhook){await pool.query("UPDATE operational_records SET discord_status='NAO_CONFIGURADO' WHERE id=$1",[record.id]);return s.status(201).json({message:"Registro salvo no portal. O Discord não foi enviado porque DISCORD_WEBHOOK_QRU não está configurado.",recordId:record.id,discordSent:false})}
+ try{
+  const fields=[
+   {name:"Tipo",value:record.record_type,inline:true},
+   {name:"QRU / Ocorrência",value:record.qru,inline:true},
+   {name:"Responsável",value:`${record.reporter_name} (ID ${record.reporter_passport_id})`,inline:false},
+   {name:"Data do registro",value:new Date(record.created_at).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"}),inline:true},
+   {name:"Descrição / Ocorrido",value:record.description.slice(0,1024),inline:false},
+   {name:"Envolvidos",value:(record.involved||"Não informado").slice(0,1024),inline:false},
+   {name:"Veículo(s)",value:(record.vehicle||"Não informado").slice(0,1024),inline:false}
+  ];
+  if(record.photo_url)fields.push({name:"Imagem / Evidência",value:record.photo_url.slice(0,1024),inline:false});
+  const resp=await fetch(webhook,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:"GTM Villa | Registro Operacional",embeds:[{title:`📋 ${record.record_type.toUpperCase()} — ${record.qru}`,color:record.record_type==="Prisão"?0x8c3434:0x5e6873,fields,timestamp:new Date(record.created_at).toISOString(),footer:{text:`Registro GTM #${record.id}`}}]})});
+  if(!resp.ok)throw new Error(`Discord respondeu HTTP ${resp.status}`);
+  await pool.query("UPDATE operational_records SET discord_status='ENVIADO',discord_error=NULL WHERE id=$1",[record.id]);
+  s.status(201).json({message:"Registro salvo e enviado ao Discord.",recordId:record.id,discordSent:true});
+ }catch(e){
+  console.error("Falha ao enviar registro ao Discord:",e.message);
+  await pool.query("UPDATE operational_records SET discord_status='ERRO',discord_error=$2 WHERE id=$1",[record.id,String(e.message).slice(0,500)]).catch(()=>{});
+  s.status(201).json({message:"Registro salvo no portal, mas não foi possível enviar ao Discord. Confira o webhook no Render.",recordId:record.id,discordSent:false});
+ }
+});
+
 app.post("/api/clock/toggle",auth,async(q,s,n)=>{const c=await pool.connect();try{await c.query("BEGIN");const open=await c.query("SELECT id FROM clock_entries WHERE user_id=$1 AND clock_out IS NULL ORDER BY clock_in DESC LIMIT 1 FOR UPDATE",[q.session.user.id]);let result,state,action;
  if(open.rowCount){result=await c.query("UPDATE clock_entries SET clock_out=NOW() WHERE id=$1 RETURNING *",[open.rows[0].id]);state="out";action="PONTO_SAIDA"}else{result=await c.query("INSERT INTO clock_entries(user_id) VALUES($1) RETURNING *",[q.session.user.id]);state="in";action="PONTO_ENTRADA"}
  await audit(c,q.session.user.id,action,q.session.user.passportId);await c.query("COMMIT");s.json({state,entry:result.rows[0],message:state==="in"?"Entrada registrada.":"Saída registrada."});

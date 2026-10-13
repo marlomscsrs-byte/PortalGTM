@@ -8,11 +8,11 @@ Primeira etapa da reestruturação: interface modular inspirada na organização
 - Aprovação administrativa; ao aprovar, cria/atualiza o integrante na tabela `users`.
 - Dashboard com efetivo, ativos, pessoas em serviço e solicitações pendentes.
 - Efetivo com pesquisa e filtro.
-- Bater ponto (entrada/saída) e histórico individual.
+- Bater ponto (entrada/saída) e histórico individual.\n- Módulo QRU/Prisão: salva ocorrências no PostgreSQL e envia embed ao Discord.
 - Endpoint `/api/health`.
 
 ## Ainda será migrado em etapas seguintes
-Manual de Conduta, QRU/Registro de Prisão e envio ao Discord, veículos, uniformes, armamentos, cursos e demais módulos do portal antigo. Mantenha o portal atual disponível até validar os módulos novos. Nenhum dado da planilha é importado automaticamente.
+Manual de Conduta, veículos, uniformes, armamentos, cursos e demais módulos do portal antigo. Mantenha o portal atual disponível até validar os módulos novos. Nenhum dado da planilha é importado automaticamente.
 
 ## Neon
 1. Crie projeto PostgreSQL no Neon.
@@ -20,7 +20,7 @@ Manual de Conduta, QRU/Registro de Prisão e envio ao Discord, veículos, unifor
 3. Copie a connection string para `DATABASE_URL` no Render.
 
 ## Render
-Use `npm install` no build e `npm start` no start. Configure `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_ID`, `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` e `NODE_ENV=production`. Defina uma senha forte e exclusiva antes do deploy. O primeiro administrador só é criado se o ID ainda não existir.
+Use `npm install` no build e `npm start` no start. Configure `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_ID`, `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `DISCORD_WEBHOOK_QRU` e `NODE_ENV=production`. O valor de `DISCORD_WEBHOOK_QRU` deve ser o webhook do canal que receberá tanto QRUs quanto registros de prisão; mantenha-o somente nas variáveis de ambiente do Render, nunca no GitHub. Defina uma senha forte e exclusiva antes do deploy. O primeiro administrador só é criado se o ID ainda não existir.
 
 ## GitHub
 Envie os arquivos deste ZIP para o repositório `marlomcsrs-byte/GTM`. Não envie `.env` nem credenciais.
@@ -34,7 +34,7 @@ Faça backup da planilha antes. Exporte `Hierarquia-GTM` para CSV e revise dupli
 - Pedido aparece em Aprovações.
 - Aprovação adiciona ao efetivo e libera login.
 - Rejeição não cria usuário aprovado.
-- Entrada/saída aparece no histórico.
+- Entrada/saída aparece no histórico.\n- Enviar uma QRU de teste e conferir se foi salva no portal e chegou ao canal configurado no Discord.\n- Conferir o status de envio do Discord no histórico operacional.
 - Conta não administrativa não acessa Aprovações.
 - Planilha antiga permanece intacta até concluir a migração.
 
