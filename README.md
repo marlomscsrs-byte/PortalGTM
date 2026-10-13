@@ -26,3 +26,7 @@ A aba Meu perfil permite que cada integrante informe/atualize seu telefone. O ca
 
 ### Telefone do RP
 O perfil permite cadastrar telefone fictício do personagem no padrão `XXX-XXX` (seis dígitos). Não use telefone real.
+
+
+## Hero Banner do Dashboard
+A imagem `public/hero-gtm.webp` é utilizada como fundo do cartão de boas-vindas no Dashboard. O texto e o botão continuam dinâmicos no HTML. Nenhuma variável de ambiente ou migração de banco é necessária para esta alteração.
