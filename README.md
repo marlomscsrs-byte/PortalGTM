@@ -30,3 +30,6 @@ O perfil permite cadastrar telefone fictício do personagem no padrão `XXX-XXX`
 
 ## Hero Banner do Dashboard
 A imagem `public/hero-gtm.webp` é utilizada como fundo do cartão de boas-vindas no Dashboard. O texto e o botão continuam dinâmicos no HTML. Nenhuma variável de ambiente ou migração de banco é necessária para esta alteração.
+
+### Dashboard refinado
+O Dashboard apresenta Hero Banner, quatro indicadores (o cartão de cadastros pendentes é exibido somente para usuários com permissão de gestão), marcações recentes, duração do ponto aberto e atalhos para QRU, Hierarquia, Manual de Conduta e Material de Apoio. O cálculo da duração é apenas visual e usa o horário de entrada já retornado pela API de ponto.
