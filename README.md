@@ -18,3 +18,11 @@
 - A flag administrativa é sincronizada com o ID definido em `ADMIN_ID` no início do servidor. Se o ambiente Render estiver configurado como `284`, apenas esse ID será administrador técnico.
 - A edição do perfil do ID administrativo e a atribuição dos cargos Comandante/Subcomandante são restritas ao administrador técnico.
 - O backend ainda depende do schema PostgreSQL já existente; nenhuma tabela nova é necessária para esta atualização.
+
+
+## Telefone no perfil
+A aba Meu perfil permite que cada integrante informe/atualize seu telefone. O campo formata automaticamente telefones brasileiros como `(00) 00000-0000` (celular) ou `(00) 0000-0000` (fixo). O telefone é opcional e é armazenado na coluna `users.phone`. O servidor cria essa coluna automaticamente no bootstrap, sem exigir execução manual de SQL.
+
+
+### Telefone do RP
+O perfil permite cadastrar telefone fictício do personagem no padrão `XXX-XXX` (seis dígitos). Não use telefone real.

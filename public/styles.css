@@ -125,10 +125,8 @@ header p{font-size:.94rem;color:#aab5c0}
 @media(max-width:720px){.sidebar{width:270px}main{padding:20px 14px}header{gap:12px}header h1{font-size:2rem}header #who{white-space:normal}#who{align-self:flex-start}.welcome{grid-template-columns:1fr;gap:20px;padding:22px}.welcome .btn{width:100%;white-space:normal}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stats .panel{min-height:105px;padding:16px}.stats strong{font-size:1.9rem}.columns>.panel{min-height:unset}.panel{padding:18px}}
 @media(max-width:420px){.stats{grid-template-columns:1fr}.profile{grid-template-columns:1fr}.welcome h2{font-size:1.35rem}}
 
-/* Emblema oficial acima do nome na identidade da barra lateral */
-.sidebrand{flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;padding:8px 8px 20px}
-.sidebrand-emblem{display:block;width:72px;height:72px;object-fit:cover;border:1px solid #505963;border-radius:12px;background:#090a0c;box-shadow:0 7px 20px #0008}
-.sidebrand-text{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
-.sidebrand-text b{font-size:.94rem;letter-spacing:.025em}
-.sidebrand-text small{font-size:.57rem;margin:0;letter-spacing:.11em}
-@media(max-width:720px){.sidebrand-emblem{width:64px;height:64px}}
+/* Meu perfil: edição de telefone */
+.profile-form{max-width:520px;margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}.profile-form label{display:block;font-size:.82rem;font-weight:750;margin:0 0 7px}.profile-form input{width:100%;background:#0b0e12;color:var(--text);border:1px solid #3a434e;border-radius:8px;padding:12px;min-height:45px;font:inherit;letter-spacing:.04em}.profile-form input:focus{outline:2px solid #77818b;outline-offset:2px}.profile-form .field-help{display:block;margin-top:7px;letter-spacing:0;font-size:.76rem}.profile-form .btn{margin-top:16px}.profile-form .msg{margin-top:10px}
+
+/* Brasão acima do nome na barra lateral */
+.sidebrand{flex-direction:column;justify-content:center;text-align:center;gap:8px;padding:8px 8px 18px}.side-emblem{display:block;width:58px;height:58px;object-fit:contain;border-radius:12px;filter:drop-shadow(0 4px 10px #0008)}.sidebrand-text b{font-size:.9rem}.sidebrand-text small{margin-top:4px}

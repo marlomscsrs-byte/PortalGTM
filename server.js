@@ -16,9 +16,10 @@ function fail(status,message){const e=new Error(message);e.status=status;return 
 function auth(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});next()}
 function admin(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});if(!me(req).isAdmin)return res.status(403).json({error:"Acesso restrito ao administrador do sistema."});next()}
 function commandAccess(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});if(!canManageUser(me(req)))return res.status(403).json({error:"Ação restrita ao Comando, Subcomando e administrador do sistema."});next()}
-function publicUser(r){const isAdmin=String(r.passport_id)===ADMIN_ID;return {id:r.id,passportId:r.passport_id,fullName:r.full_name,badge:r.badge||"",rank:r.rank||"",role:r.role,status:r.status,isAdmin,canManage:isAdmin||commandRoles.includes(r.role)}}
+function publicUser(r){const isAdmin=String(r.passport_id)===ADMIN_ID;return {id:r.id,passportId:r.passport_id,fullName:r.full_name,phone:r.phone||"",badge:r.badge||"",rank:r.rank||"",role:r.role,status:r.status,isAdmin,canManage:isAdmin||commandRoles.includes(r.role)}}
 async function audit(client,user,action,target,details={}){await client.query("INSERT INTO audit_log(actor_user_id,action,target_passport_id,details) VALUES($1,$2,$3,$4)",[user||null,action,target||null,JSON.stringify(details)])}
 async function bootstrap(){
+ await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) NOT NULL DEFAULT ''");
  await pool.query("CREATE TABLE IF NOT EXISTS user_sessions(sid varchar NOT NULL PRIMARY KEY,sess json NOT NULL,expire timestamp(6) NOT NULL); CREATE INDEX IF NOT EXISTS idx_session_expire ON user_sessions(expire)");
  await pool.query(`CREATE TABLE IF NOT EXISTS operational_records(
   id BIGSERIAL PRIMARY KEY, reporter_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
@@ -38,6 +39,7 @@ async function bootstrap(){
 }
 app.get("/api/health",async(_q,s)=>{try{await pool.query("SELECT 1");s.json({ok:true,database:"connected"})}catch{s.status(503).json({ok:false,database:"unavailable"})}});
 app.get("/api/auth/me",async(q,s,n)=>{try{if(!me(q))return s.json({user:null});const r=await pool.query("SELECT * FROM users WHERE passport_id=$1 AND access_status='APROVADO'",[me(q).passportId]);if(!r.rowCount){q.session.user=null;return s.json({user:null})}q.session.user=publicUser(r.rows[0]);s.json({user:q.session.user})}catch(e){n(e)}});
+app.put("/api/profile",auth,async(q,s,n)=>{try{const phone=clean(q.body.phone);const digits=phone.replace(/\D/g,"");if(phone&&digits.length!==6)throw fail(400,"Informe o telefone do RP com seis números no formato XXX-XXX.");const formatted=digits?`${digits.slice(0,3)}-${digits.slice(3)}`:"";const r=await pool.query("UPDATE users SET phone=$2,updated_at=NOW() WHERE passport_id=$1 AND access_status='APROVADO' RETURNING *",[me(q).passportId,formatted]);if(!r.rowCount)throw fail(404,"Perfil não encontrado.");q.session.user=publicUser(r.rows[0]);s.json({message:"Telefone do RP atualizado com sucesso.",user:q.session.user});}catch(e){n(e)}});
 app.post("/api/auth/register",async(q,s,n)=>{try{
  const id=clean(q.body.passportId),name=clean(q.body.fullName),role=clean(q.body.role),pass=String(q.body.password||"");
  if(!/^\d{1,12}$/.test(id))throw fail(400,"ID numérico inválido.");
