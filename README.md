@@ -1,42 +1,20 @@
-# Portal Operacional G.T.M. Villa
+# Portal Operacional G.T.M. Villa — versão refinada
 
-Primeira etapa da reestruturação: interface modular inspirada na organização do Sistema dos Instrutores, identidade militar preta/cinza, backend Node.js/Express no Render e PostgreSQL no Neon.
+## Atualização desta versão
+- Refinamento visual geral: painéis, cartões, botões, tabelas, estados, hierarquia e navegação.
+- Login com imagem de fundo preenchendo a tela e formulário centralizado.
+- ID definido por `ADMIN_ID` no Render é o único administrador técnico; mantenha esse valor como `284` no serviço Render.
+- Comandante e Subcomandante podem aprovar/rejeitar cadastros e editar perfis operacionais.
+- A edição de perfis é verificada no backend; usuários comuns não podem alterar integrantes.
+- Novos cadastros públicos entram como Probatório; cargos superiores devem ser atribuídos por autoridade autorizada.
+- Mantidos dashboard, login, QRU/Discord, ponto, hierarquia e materiais.
 
-## Funcionalidades desta etapa
-- Login por ID e senha, sessão persistida no PostgreSQL.
-- Solicitação de cadastro com ID, nome, cargo e senha.
-- Aprovação administrativa; ao aprovar, cria/atualiza o integrante na tabela `users`.
-- Dashboard com efetivo, ativos, pessoas em serviço e solicitações pendentes.
-- Efetivo com pesquisa e filtro.
-- Bater ponto (entrada/saída) e histórico individual.\n- Módulo QRU/Prisão: salva ocorrências no PostgreSQL e envia embed ao Discord.
-- Endpoint `/api/health`.
+## Publicação
+1. Envie o conteúdo desta pasta ao repositório usado pelo serviço `portal-gtm`, mantendo `server.js`, `package.json`, `render.yaml`, `db/` e `public/` na raiz correta.
+2. No Render, confirme `ADMIN_ID=284`, `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_PASSWORD` e `DISCORD_WEBHOOK_QRU`. Nunca publique segredos no GitHub.
+3. Faça o deploy e teste login, ponto, QRU/Discord, aprovações como ID 284 e como Comandante/Subcomandante, e edição de perfil.
 
-## Ainda será migrado em etapas seguintes
-Manual de Conduta, veículos, uniformes, armamentos, cursos e demais módulos do portal antigo. Mantenha o portal atual disponível até validar os módulos novos. Nenhum dado da planilha é importado automaticamente.
-
-## Neon
-1. Crie projeto PostgreSQL no Neon.
-2. Execute todo `db/schema.sql` no SQL Editor.
-3. Copie a connection string para `DATABASE_URL` no Render.
-
-## Render
-Use `npm install` no build e `npm start` no start. Configure `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_ID`, `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `DISCORD_WEBHOOK_QRU` e `NODE_ENV=production`. O valor de `DISCORD_WEBHOOK_QRU` deve ser o webhook do canal que receberá tanto QRUs quanto registros de prisão; mantenha-o somente nas variáveis de ambiente do Render, nunca no GitHub. Defina uma senha forte e exclusiva antes do deploy. O primeiro administrador só é criado se o ID ainda não existir.
-
-## GitHub
-Envie os arquivos deste ZIP para o repositório `marlomcsrs-byte/GTM`. Não envie `.env` nem credenciais.
-
-## Migração da hierarquia
-Faça backup da planilha antes. Exporte `Hierarquia-GTM` para CSV e revise duplicados. Mapeamento: `ID -> passport_id`, `NOMES -> full_name`, `BADGE -> badge`, `PATENTES -> rank`, `CARGOS -> role`, `STATUS -> status`, `DATA DE ENTRADA -> entry_date`. Importe os dados revisados para `users` antes de abrir o portal à equipe. Não importe senhas em texto aberto; cada integrante deverá cadastrar senha ou passar por redefinição segura.
-
-## Teste antes de trocar o site público
-- `/api/health` retorna `ok`.
-- Login administrativo funciona.
-- Pedido aparece em Aprovações.
-- Aprovação adiciona ao efetivo e libera login.
-- Rejeição não cria usuário aprovado.
-- Entrada/saída aparece no histórico.\n- Enviar uma QRU de teste e conferir se foi salva no portal e chegou ao canal configurado no Discord.\n- Conferir o status de envio do Discord no histórico operacional.
-- Conta não administrativa não acessa Aprovações.
-- Planilha antiga permanece intacta até concluir a migração.
-
-## Segurança
-O navegador não acessa o banco diretamente. Nunca publique a connection string, o segredo de sessão ou a senha administrativa no GitHub. O controle de cadastro de permissões será ampliado nas próximas etapas.
+## Observações de segurança
+- A flag administrativa é sincronizada com o ID definido em `ADMIN_ID` no início do servidor. Se o ambiente Render estiver configurado como `284`, apenas esse ID será administrador técnico.
+- A edição do perfil do ID administrativo e a atribuição dos cargos Comandante/Subcomandante são restritas ao administrador técnico.
+- O backend ainda depende do schema PostgreSQL já existente; nenhuma tabela nova é necessária para esta atualização.

@@ -9,10 +9,14 @@ app.use(session({store:new PgSession({pool,tableName:"user_sessions",createTable
 app.use(express.static(path.join(__dirname,"public")));
 const roles=["Comandante","Subcomandante","Supervisor","Capitão","Piloto Veterano","Piloto Oficial","Piloto","Probatório"];
 const clean=v=>String(v??"").trim(), me=req=>req.session.user;
+const ADMIN_ID=clean(process.env.ADMIN_ID||"284");
+const commandRoles=["Comandante","Subcomandante"];
+const canManageUser=u=>!!u&&(u.isAdmin||commandRoles.includes(u.role));
 function fail(status,message){const e=new Error(message);e.status=status;return e}
 function auth(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});next()}
-function admin(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});if(!me(req).isAdmin)return res.status(403).json({error:"Acesso restrito à administração."});next()}
-function publicUser(r){return {id:r.id,passportId:r.passport_id,fullName:r.full_name,badge:r.badge||"",rank:r.rank||"",role:r.role,status:r.status,isAdmin:r.is_admin}}
+function admin(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});if(!me(req).isAdmin)return res.status(403).json({error:"Acesso restrito ao administrador do sistema."});next()}
+function commandAccess(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});if(!canManageUser(me(req)))return res.status(403).json({error:"Ação restrita ao Comando, Subcomando e administrador do sistema."});next()}
+function publicUser(r){const isAdmin=String(r.passport_id)===ADMIN_ID;return {id:r.id,passportId:r.passport_id,fullName:r.full_name,badge:r.badge||"",rank:r.rank||"",role:r.role,status:r.status,isAdmin,canManage:isAdmin||commandRoles.includes(r.role)}}
 async function audit(client,user,action,target,details={}){await client.query("INSERT INTO audit_log(actor_user_id,action,target_passport_id,details) VALUES($1,$2,$3,$4)",[user||null,action,target||null,JSON.stringify(details)])}
 async function bootstrap(){
  await pool.query("CREATE TABLE IF NOT EXISTS user_sessions(sid varchar NOT NULL PRIMARY KEY,sess json NOT NULL,expire timestamp(6) NOT NULL); CREATE INDEX IF NOT EXISTS idx_session_expire ON user_sessions(expire)");
@@ -26,18 +30,19 @@ async function bootstrap(){
  )`);
  await pool.query("ALTER TABLE operational_records ALTER COLUMN description SET DEFAULT ''");
  await pool.query("CREATE INDEX IF NOT EXISTS idx_operational_records_created ON operational_records(created_at DESC)");
- const id=clean(process.env.ADMIN_ID),name=clean(process.env.ADMIN_NAME||"Administrador GTM"),password=clean(process.env.ADMIN_PASSWORD);
+ const id=ADMIN_ID,name=clean(process.env.ADMIN_NAME||"Administrador GTM"),password=clean(process.env.ADMIN_PASSWORD);
+ await pool.query("UPDATE users SET is_admin=(passport_id=$1)",[id]);
  if(!id||!password||password.startsWith("troque-")){console.warn("Configure ADMIN_ID e ADMIN_PASSWORD forte para criar o primeiro administrador.");return}
  const exists=await pool.query("SELECT id FROM users WHERE passport_id=$1",[id]);if(exists.rowCount)return;
  await pool.query("INSERT INTO users(passport_id,full_name,rank,role,status,password_hash,is_admin,access_status,approved_at,entry_date) VALUES($1,$2,'Administração','Comandante','Ativo',$3,TRUE,'APROVADO',NOW(),CURRENT_DATE)",[id,name,await bcrypt.hash(password,12)]);
 }
 app.get("/api/health",async(_q,s)=>{try{await pool.query("SELECT 1");s.json({ok:true,database:"connected"})}catch{s.status(503).json({ok:false,database:"unavailable"})}});
-app.get("/api/auth/me",(q,s)=>s.json({user:me(q)||null}));
+app.get("/api/auth/me",async(q,s,n)=>{try{if(!me(q))return s.json({user:null});const r=await pool.query("SELECT * FROM users WHERE passport_id=$1 AND access_status='APROVADO'",[me(q).passportId]);if(!r.rowCount){q.session.user=null;return s.json({user:null})}q.session.user=publicUser(r.rows[0]);s.json({user:q.session.user})}catch(e){n(e)}});
 app.post("/api/auth/register",async(q,s,n)=>{try{
  const id=clean(q.body.passportId),name=clean(q.body.fullName),role=clean(q.body.role),pass=String(q.body.password||"");
  if(!/^\d{1,12}$/.test(id))throw fail(400,"ID numérico inválido.");
  if(name.length<2||name.length>120)throw fail(400,"Informe seu nome completo.");
- if(!roles.includes(role))throw fail(400,"Cargo inválido.");
+ if(role!=="Probatório")throw fail(400,"Novos cadastros entram como Probatório. O Comando poderá ajustar o cargo após a aprovação.");
  if(pass.length<8||!/[A-Z]/.test(pass)||!/[a-z]/.test(pass)||!/\d/.test(pass))throw fail(400,"Senha: mínimo 8 caracteres, maiúscula, minúscula e número.");
  if((await pool.query("SELECT 1 FROM users WHERE passport_id=$1 AND access_status='APROVADO'",[id])).rowCount)throw fail(409,"Este ID já possui acesso.");
  if((await pool.query("SELECT 1 FROM access_requests WHERE passport_id=$1 AND status='PENDENTE'",[id])).rowCount)throw fail(409,"Já existe solicitação pendente para este ID.");
@@ -59,12 +64,26 @@ app.get("/api/dashboard",auth,async(q,s,n)=>{try{
  pool.query("SELECT COUNT(*)::int n FROM access_requests WHERE status='PENDENTE'"),
  pool.query("SELECT c.clock_in,c.clock_out,u.full_name,u.passport_id FROM clock_entries c JOIN users u ON u.id=c.user_id ORDER BY c.clock_in DESC LIMIT 8"),
  pool.query("SELECT id,clock_in FROM clock_entries WHERE user_id=$1 AND clock_out IS NULL ORDER BY clock_in DESC LIMIT 1",[q.session.user.id])]);
- s.json({counts:{total:total.rows[0].n,active:active.rows[0].n,onDuty:duty.rows[0].n,pending:q.session.user.isAdmin?pending.rows[0].n:null},recentClock:recent.rows,myOpenClock:own.rows[0]||null});
+ s.json({counts:{total:total.rows[0].n,active:active.rows[0].n,onDuty:duty.rows[0].n,pending:canManageUser(q.session.user)?pending.rows[0].n:null},recentClock:recent.rows,myOpenClock:own.rows[0]||null});
 }catch(e){n(e)}});
 app.get("/api/people",auth,async(q,s,n)=>{try{
  const term="%"+clean(q.query.q)+"%",status=clean(q.query.status);
  const r=await pool.query(`SELECT id,passport_id,full_name,badge,rank,role,status,entry_date FROM users WHERE access_status='APROVADO' AND (full_name ILIKE $1 OR passport_id ILIKE $1 OR role ILIKE $1) AND ($2='' OR status=$2) ORDER BY CASE role WHEN 'Comandante' THEN 1 WHEN 'Subcomandante' THEN 2 WHEN 'Supervisor' THEN 3 WHEN 'Capitão' THEN 4 WHEN 'Piloto Veterano' THEN 5 WHEN 'Piloto Oficial' THEN 6 WHEN 'Piloto' THEN 7 WHEN 'Probatório' THEN 8 ELSE 9 END,full_name`,[term,status]);s.json({people:r.rows});
 }catch(e){n(e)}});
+
+app.put("/api/people/:passportId",commandAccess,async(q,s,n)=>{try{
+ const target=clean(q.params.passportId),fullName=clean(q.body.fullName),rank=clean(q.body.rank),role=clean(q.body.role),status=clean(q.body.status),entryDate=clean(q.body.entryDate);
+ if(!/^\d{1,12}$/.test(target))throw fail(400,"ID inválido.");
+ if(target===ADMIN_ID&&!me(q).isAdmin)throw fail(403,"Somente o administrador ID configurado no Render pode editar o próprio perfil administrativo.");
+ if(fullName.length<2||fullName.length>120)throw fail(400,"Informe um nome entre 2 e 120 caracteres.");
+ if(!roles.includes(role))throw fail(400,"Cargo inválido.");
+ if(!["Ativo","Inativo","Afastado"].includes(status))throw fail(400,"Status inválido.");
+ if(entryDate&&!/^\d{4}-\d{2}-\d{2}$/.test(entryDate))throw fail(400,"Data de entrada inválida.");
+ if(!me(q).isAdmin&&(role==="Comandante"||role==="Subcomandante"))throw fail(403,"Somente o administrador do sistema pode atribuir os cargos de Comandante ou Subcomandante.");
+ const c=await pool.connect();try{await c.query("BEGIN");const old=await c.query("SELECT id,role FROM users WHERE passport_id=$1 AND access_status='APROVADO' FOR UPDATE",[target]);if(!old.rowCount)throw fail(404,"Integrante não encontrado.");if(!me(q).isAdmin&&["Comandante","Subcomandante"].includes(old.rows[0].role))throw fail(403,"Somente o administrador do sistema pode alterar os perfis do Comando.");
+ const updated=await c.query("UPDATE users SET full_name=$2,rank=$3,role=$4,status=$5,entry_date=CASE WHEN $6='' THEN entry_date ELSE $6::date END,updated_at=NOW(),is_admin=(passport_id=$7) WHERE passport_id=$1 RETURNING passport_id,full_name,rank,role,status,entry_date",[target,fullName,rank,role,status,entryDate,ADMIN_ID]);
+ await audit(c,me(q).id,"PERFIL_EDITADO",target,{role,status});await c.query("COMMIT");s.json({message:"Perfil atualizado.",person:updated.rows[0]});}catch(e){await c.query("ROLLBACK").catch(()=>{});throw e}finally{c.release()}
+ }catch(e){n(e)}});
 
 app.get("/api/operational-records",auth,async(q,s,n)=>{try{
  const r=await pool.query("SELECT id,reporter_passport_id,reporter_name,record_type,qru,occurred_at,description,involved,vehicle,photo_url,discord_status,created_at FROM operational_records ORDER BY created_at DESC LIMIT 100");
@@ -112,8 +131,8 @@ app.post("/api/clock/toggle",auth,async(q,s,n)=>{const c=await pool.connect();tr
  await audit(c,q.session.user.id,action,q.session.user.passportId);await c.query("COMMIT");s.json({state,entry:result.rows[0],message:state==="in"?"Entrada registrada.":"Saída registrada."});
 }catch(e){await c.query("ROLLBACK");n(e)}finally{c.release()}});
 app.get("/api/clock/history",auth,async(q,s,n)=>{try{const r=await pool.query("SELECT id,clock_in,clock_out FROM clock_entries WHERE user_id=$1 ORDER BY clock_in DESC LIMIT 30",[q.session.user.id]);s.json({entries:r.rows})}catch(e){n(e)}});
-app.get("/api/admin/access-requests",admin,async(q,s,n)=>{try{const r=await pool.query("SELECT id,passport_id,full_name,requested_role,requested_at FROM access_requests WHERE status='PENDENTE' ORDER BY requested_at");s.json({requests:r.rows})}catch(e){n(e)}});
-app.post("/api/admin/access-requests/:id/review",admin,async(q,s,n)=>{const c=await pool.connect();try{
+app.get("/api/admin/access-requests",commandAccess,async(q,s,n)=>{try{const r=await pool.query("SELECT id,passport_id,full_name,requested_role,requested_at FROM access_requests WHERE status='PENDENTE' ORDER BY requested_at");s.json({requests:r.rows})}catch(e){n(e)}});
+app.post("/api/admin/access-requests/:id/review",commandAccess,async(q,s,n)=>{const c=await pool.connect();try{
  const id=Number(q.params.id),decision=clean(q.body.decision).toUpperCase(),note=clean(q.body.note);if(!Number.isInteger(id)||!["APROVADO","REJEITADO"].includes(decision))throw fail(400,"Solicitação inválida.");
  await c.query("BEGIN");const found=await c.query("SELECT * FROM access_requests WHERE id=$1 FOR UPDATE",[id]);if(!found.rowCount||found.rows[0].status!=="PENDENTE")throw fail(409,"Solicitação já analisada ou não encontrada.");
  const r=found.rows[0];if(decision==="APROVADO"){
