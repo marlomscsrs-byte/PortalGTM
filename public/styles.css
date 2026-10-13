@@ -30,3 +30,5 @@
 .current-people-title{margin-top:24px}
 @media(max-width:1000px){.official-rank-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.official-rank-grid{grid-template-columns:1fr}.manual-content .section-heading h2{font-size:1.15rem}}
+
+.material-action{font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;transition:border-color .18s,transform .18s}.material-action:hover{border-color:#77818b;transform:translateY(-2px)}.material-action>span:last-child{display:block;min-width:0}.material-action h3{font-size:1rem}.material-action .material-status{margin-top:0}.material-detail{margin-top:24px;padding-top:22px;border-top:1px solid #303740}.material-detail p{line-height:1.75;color:#d1d6dc}.material-note{border-left:3px solid #707982;padding:10px 14px;background:#0e1115;border-radius:0 8px 8px 0;color:#aeb7c1!important;font-size:.9rem}

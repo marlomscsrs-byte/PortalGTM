@@ -28,3 +28,13 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")$(".sidebar").classL
 $("#qruDate").value=new Date().toLocaleDateString("en-CA");
 function tick(){$("#time").textContent=new Date().toLocaleTimeString("pt-BR");$("#date").textContent=new Date().toLocaleDateString("pt-BR",{dateStyle:"full"})}setInterval(tick,1000);tick();
 (async()=>{try{const r=await api("/api/auth/me");if(r.user){user=r.user;showApp()}else showAuth()}catch{showAuth()}})();
+
+
+const materialContent={
+ motocicletas:{title:"Motocicletas",eyebrow:"VEÍCULOS AUTORIZADOS",html:'<p>O manual antigo menciona os modelos <strong>GS 1300</strong>, <strong>Tiger 1200</strong> e <strong>V-Strom</strong> como motocicletas de uso exclusivo da unidade G.T.M.</p><p>As regras completas de condução, acompanhamento e posicionamento estão disponíveis no Manual de Conduta.</p><p class="material-note">Consulte o Comando para confirmar a relação atualizada de veículos autorizados na cidade.</p>'},
+ armamentos:{title:"Armamentos",eyebrow:"MATERIAL OPERACIONAL",html:'<p>Esta categoria está preparada para reunir a relação oficial de armamentos e as orientações internas de utilização.</p><p class="material-note">A relação específica não consta no arquivo do portal antigo que recuperamos. O conteúdo oficial deverá ser cadastrado pelo Comando.</p>'},
+ fardamentos:{title:"Fardamentos",eyebrow:"PADRONIZAÇÃO VISUAL",html:'<p>Esta categoria está preparada para reunir os fardamentos oficiais, suas variações e as orientações de apresentação dos integrantes.</p><p class="material-note">Os modelos e imagens oficiais não constam no arquivo do portal antigo que recuperamos. O conteúdo deverá ser cadastrado pelo Comando.</p>'}
+};
+function openMaterial(key){if(key==="manual"){go("manual");return}const item=materialContent[key];if(!item)return;$("#materialTitle").textContent=item.title;$("#materialEyebrow").textContent=item.eyebrow;$("#materialBody").innerHTML=item.html;$("#materialDetail").hidden=false;$("#materialDetail").scrollIntoView({behavior:"smooth",block:"start"})}
+$$('[data-material]').forEach(b=>b.addEventListener('click',()=>openMaterial(b.dataset.material)));
+$("#closeMaterial").onclick=()=>{$("#materialDetail").hidden=true;$("#materialDetail").scrollIntoView({behavior:"smooth",block:"start"});};
