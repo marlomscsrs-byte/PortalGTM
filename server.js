@@ -20,10 +20,11 @@ async function bootstrap(){
   id BIGSERIAL PRIMARY KEY, reporter_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
   reporter_passport_id VARCHAR(32) NOT NULL, reporter_name VARCHAR(120) NOT NULL,
   record_type VARCHAR(40) NOT NULL, qru VARCHAR(100) NOT NULL, occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  description TEXT NOT NULL, involved TEXT NOT NULL DEFAULT '', vehicle TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '', involved TEXT NOT NULL DEFAULT '', vehicle TEXT NOT NULL DEFAULT '',
   photo_url TEXT NOT NULL DEFAULT '', discord_status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
   discord_error TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
  )`);
+ await pool.query("ALTER TABLE operational_records ALTER COLUMN description SET DEFAULT ''");
  await pool.query("CREATE INDEX IF NOT EXISTS idx_operational_records_created ON operational_records(created_at DESC)");
  const id=clean(process.env.ADMIN_ID),name=clean(process.env.ADMIN_NAME||"Administrador GTM"),password=clean(process.env.ADMIN_PASSWORD);
  if(!id||!password||password.startsWith("troque-")){console.warn("Configure ADMIN_ID e ADMIN_PASSWORD forte para criar o primeiro administrador.");return}
@@ -71,18 +72,17 @@ app.get("/api/operational-records",auth,async(q,s,n)=>{try{
 }catch(e){n(e)}});
 app.post("/api/operational-records",auth,async(q,s,n)=>{const c=await pool.connect();let record;
  try{
-  const type=clean(q.body.recordType),qru=clean(q.body.qru),description=clean(q.body.description),involved=clean(q.body.involved),vehicle=clean(q.body.vehicle),photoUrl=clean(q.body.photoUrl);
-  if(!["QRU","Prisão"].includes(type))throw fail(400,"Tipo de registro inválido.");
-  if(qru.length<2||qru.length>100)throw fail(400,"Informe a QRU/ocorrência (até 100 caracteres).");
-  if(description.length<5||description.length>4000)throw fail(400,"A descrição deve ter entre 5 e 4.000 caracteres.");
-  if(involved.length>1500||vehicle.length>500)throw fail(400,"Os campos de envolvidos ou veículos excederam o limite.");
-  if(photoUrl && (!/^https:\/\/\S+$/i.test(photoUrl)||photoUrl.length>1000))throw fail(400,"O link da imagem deve ser uma URL HTTPS válida.");
+   const qru=clean(q.body.qru),involved=clean(q.body.involved),vehicle=clean(q.body.vehicle),photoUrl=clean(q.body.photoUrl),dateValue=clean(q.body.date);
+  if(qru.length<2||qru.length>100)throw fail(400,"Informe a QRU (até 100 caracteres).");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)||Number.isNaN(Date.parse(dateValue+"T12:00:00-03:00")))throw fail(400,"Informe uma data válida.");
+  if(!involved||involved.length>1500||!vehicle||vehicle.length>500)throw fail(400,"Preencha envolvidos e veículo.");
+  if(!/^https:\/\/\S+$/i.test(photoUrl)||photoUrl.length>1000)throw fail(400,"Informe um link HTTPS válido para a foto/evidência.");
   await c.query("BEGIN");
-  const saved=await c.query(`INSERT INTO operational_records(reporter_user_id,reporter_passport_id,reporter_name,record_type,qru,description,involved,vehicle,photo_url)
-   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-   [q.session.user.id,q.session.user.passportId,q.session.user.fullName,type,qru,description,involved,vehicle,photoUrl]);
+  const saved=await c.query(`INSERT INTO operational_records(reporter_user_id,reporter_passport_id,reporter_name,record_type,qru,occurred_at,description,involved,vehicle,photo_url)
+   VALUES($1,$2,$3,'QRU',$4,$5,'',$6,$7,$8) RETURNING *`,
+   [q.session.user.id,q.session.user.passportId,q.session.user.fullName,qru,new Date(dateValue+"T12:00:00-03:00"),involved,vehicle,photoUrl]);
   record=saved.rows[0];
-  await audit(c,q.session.user.id,"REGISTRO_OPERACIONAL",q.session.user.passportId,{recordId:record.id,recordType:type,qru});
+  await audit(c,q.session.user.id,"REGISTRO_OPERACIONAL",q.session.user.passportId,{recordId:record.id,recordType:"QRU",qru});
   await c.query("COMMIT");
  }catch(e){await c.query("ROLLBACK").catch(()=>{});c.release();return n(e)}
  c.release();
@@ -90,16 +90,13 @@ app.post("/api/operational-records",auth,async(q,s,n)=>{const c=await pool.conne
  if(!webhook){await pool.query("UPDATE operational_records SET discord_status='NAO_CONFIGURADO' WHERE id=$1",[record.id]);return s.status(201).json({message:"Registro salvo no portal. O Discord não foi enviado porque DISCORD_WEBHOOK_QRU não está configurado.",recordId:record.id,discordSent:false})}
  try{
   const fields=[
-   {name:"Tipo",value:record.record_type,inline:true},
-   {name:"QRU / Ocorrência",value:record.qru,inline:true},
-   {name:"Responsável",value:`${record.reporter_name} (ID ${record.reporter_passport_id})`,inline:false},
-   {name:"Data do registro",value:new Date(record.created_at).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"}),inline:true},
-   {name:"Descrição / Ocorrido",value:record.description.slice(0,1024),inline:false},
-   {name:"Envolvidos",value:(record.involved||"Não informado").slice(0,1024),inline:false},
-   {name:"Veículo(s)",value:(record.vehicle||"Não informado").slice(0,1024),inline:false}
+   {name:"Piloto",value:`${record.reporter_name} — ID ${record.reporter_passport_id}`,inline:false},
+   {name:"Data",value:new Date(record.occurred_at).toLocaleDateString("pt-BR",{timeZone:"America/Sao_Paulo"}),inline:true},
+   {name:"QRU",value:record.qru,inline:true},
+   {name:"Envolvidos",value:record.involved.slice(0,1024),inline:false},
+   {name:"Veículo",value:record.vehicle.slice(0,1024),inline:false}
   ];
-  if(record.photo_url)fields.push({name:"Imagem / Evidência",value:record.photo_url.slice(0,1024),inline:false});
-  const resp=await fetch(webhook,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:"GTM Villa | Registro Operacional",embeds:[{title:`📋 ${record.record_type.toUpperCase()} — ${record.qru}`,color:record.record_type==="Prisão"?0x8c3434:0x5e6873,fields,timestamp:new Date(record.created_at).toISOString(),footer:{text:`Registro GTM #${record.id}`}}]})});
+  const resp=await fetch(webhook,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:"GTM Villa | Registro Operacional",embeds:[{title:"🚨 Novo Registro de QRU",color:0x5e6873,fields,image:{url:record.photo_url},timestamp:new Date(record.created_at).toISOString(),footer:{text:`Registro GTM #${record.id}`}}]})});
   if(!resp.ok)throw new Error(`Discord respondeu HTTP ${resp.status}`);
   await pool.query("UPDATE operational_records SET discord_status='ENVIADO',discord_error=NULL WHERE id=$1",[record.id]);
   s.status(201).json({message:"Registro salvo e enviado ao Discord.",recordId:record.id,discordSent:true});

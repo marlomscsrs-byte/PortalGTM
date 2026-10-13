@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS operational_records(
  record_type VARCHAR(40) NOT NULL CHECK(record_type IN ('QRU','Prisão')),
  qru VARCHAR(100) NOT NULL,
  occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
- description TEXT NOT NULL,
+ description TEXT NOT NULL DEFAULT '',
  involved TEXT NOT NULL DEFAULT '',
  vehicle TEXT NOT NULL DEFAULT '',
  photo_url TEXT NOT NULL DEFAULT '',
