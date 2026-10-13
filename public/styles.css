@@ -7,3 +7,26 @@
 .material-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}.material-card{display:flex;gap:15px;padding:18px;border:1px solid #303740;border-radius:12px;background:linear-gradient(145deg,#171c22,#0e1115)}.material-card h3{margin:3px 0 9px}.material-card p{margin-bottom:12px}.material-icon{width:44px;height:44px;flex:0 0 44px;border:1px solid #454d56;border-radius:10px;display:grid;place-items:center;font-size:1.25rem;background:#242a31}.material-status{font-size:.72rem;color:#c3cbd3;border:1px solid #414a54;border-radius:20px;padding:5px 9px;display:inline-block}.hierarchy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.hierarchy-rank{border:1px solid #303740;border-radius:11px;padding:15px;background:#101419}.hierarchy-rank h3{display:flex;justify-content:space-between;gap:10px;margin-bottom:12px}.hierarchy-rank h3 span{font-size:.75rem;background:#2a3037;padding:4px 8px;border-radius:20px}.hierarchy-person{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-top:1px solid #2b323a}.hierarchy-person b,.hierarchy-person small{display:block}.hierarchy-person small{margin-top:5px;letter-spacing:0;font-size:.72rem}@media(max-width:850px){.material-grid,.hierarchy-grid{grid-template-columns:1fr}}
 
 @media(max-width:700px){.auth{background-attachment:scroll;padding:24px 14px}.auth-grid{grid-template-columns:minmax(0,390px);width:100%}.brand{width:100%}}
+
+/* Manual de Conduta recuperado do portal antigo */
+.manual-content .manual-section{padding:22px 0;border-top:1px solid #303740;line-height:1.7}
+.manual-content .manual-section:first-of-type{border-top:0}
+.manual-content .section-heading{display:flex;align-items:center;gap:14px;margin-bottom:15px}
+.manual-content .section-number{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;border:1px solid #4b535c;border-radius:10px;background:#20262d;font-weight:850;color:#e0e5ea}
+.manual-content .section-heading p{margin:0 0 4px;color:#a0a9b3;font-size:.68rem;letter-spacing:.12em}
+.manual-content .section-heading h2{margin:0;font-size:1.35rem}
+.manual-content p,.manual-content li{color:#d1d6dc;line-height:1.75}
+.manual-content ol,.manual-content ul{padding-left:24px}
+.manual-content li{margin:9px 0}
+.manual-note{padding:12px 14px;border:1px solid #414a54;border-radius:9px;background:#101419;color:#b7c0c9;font-size:.83rem;margin:16px 0 8px}
+.official-hierarchy{margin:18px 0 26px;padding:18px;border:1px solid #303740;border-radius:12px;background:#101419}
+.official-hierarchy>h3,.current-people-title{margin:0 0 15px}
+.official-rank-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.official-rank-grid article{padding:14px;border:1px solid #343c45;border-radius:10px;background:#171c22}
+.official-rank-grid article span{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:7px;background:#2a3037;color:#e0e5ea;font-size:.75rem;font-weight:800}
+.official-rank-grid h4{margin:10px 0 7px;font-size:1rem}.official-rank-grid p{font-size:.83rem;color:#aeb7c1;line-height:1.5;margin:0}
+.hierarchy-rule{padding:12px 14px;margin:14px 0 0;border-left:3px solid #9ca5ae;background:#171c22;color:#cbd1d7;line-height:1.6}
+.hierarchy-rule b{display:block;margin-bottom:4px;color:#fff}
+.current-people-title{margin-top:24px}
+@media(max-width:1000px){.official-rank-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.official-rank-grid{grid-template-columns:1fr}.manual-content .section-heading h2{font-size:1.15rem}}

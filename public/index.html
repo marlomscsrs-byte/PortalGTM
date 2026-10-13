@@ -2,13 +2,118 @@
 <section id="auth" class="auth"><div class="auth-grid">
 <form id="login" class="panel"><small>ACESSO RESTRITO</small><h2>Entrar no portal</h2><p>Use seu ID e sua senha aprovada.</p><label>ID / Passaporte</label><input id="loginId" required inputmode="numeric"><label>Senha</label><input id="loginPass" type="password" required><button class="btn primary">Entrar</button><p id="loginMsg" class="msg"></p><button type="button" class="link" id="toRegister">Solicitar cadastro</button></form>
 <form id="register" class="panel" hidden><small>NOVO INTEGRANTE</small><h2>Solicitar cadastro</h2><p>O acesso depende de aprovação administrativa.</p><label>ID / Passaporte</label><input id="regId" required inputmode="numeric"><label>Nome completo</label><input id="regName" required maxlength="120"><label>Cargo solicitado</label><select id="regRole" required><option value="">Selecione</option><option>Comandante</option><option>Subcomandante</option><option>Supervisor</option><option>Capitão</option><option>Piloto Veterano</option><option>Piloto Oficial</option><option>Piloto</option><option>Probatório</option></select><label>Senha</label><input id="regPass" type="password" required><small>8 caracteres, maiúscula, minúscula e número.</small><label>Confirmar senha</label><input id="regPass2" type="password" required><button class="btn primary">Enviar solicitação</button><p id="regMsg" class="msg"></p><button type="button" class="link" id="toLogin">Voltar ao login</button></form></div></section>
-<div id="app" hidden><aside class="sidebar"><div class="sidebrand"><div class="logo">GTM</div><div><b>G.T.M. Villa</b><small>PORTAL OPERACIONAL</small></div></div><nav><small>GESTÃO</small><button data-view="dashboard" class="nav active">▦ Dashboard</button><button data-view="people" class="nav">♟ Efetivo</button><button data-view="clock" class="nav">◷ Bater ponto</button><button data-view="qru" class="nav">▤ QRU / Prisão</button><button data-view="hierarchy" class="nav">♜ Hierarquia</button><button data-view="materials" class="nav">▣ Material de Apoio</button><button data-view="approvals" class="nav admin" hidden>✓ Aprovações <span id="badge"></span></button><button data-view="profile" class="nav">◎ Meu perfil</button></nav><div class="sidebottom"><b id="sideName"></b><small id="sideRole"></small><button id="logout" class="btn outline">Sair do sistema</button></div></aside>
+<div id="app" hidden><aside class="sidebar"><div class="sidebrand"><div class="logo">GTM</div><div><b>G.T.M. Villa</b><small>PORTAL OPERACIONAL</small></div></div><nav><small>GESTÃO</small><button data-view="dashboard" class="nav active">▦ Dashboard</button><button data-view="people" class="nav">♟ Efetivo</button><button data-view="clock" class="nav">◷ Bater ponto</button><button data-view="qru" class="nav">▤ QRU / Prisão</button><button data-view="hierarchy" class="nav">♜ Hierarquia</button><button data-view="manual" class="nav">▤ Manual de Conduta</button><button data-view="materials" class="nav">▣ Material de Apoio</button><button data-view="approvals" class="nav admin" hidden>✓ Aprovações <span id="badge"></span></button><button data-view="profile" class="nav">◎ Meu perfil</button></nav><div class="sidebottom"><b id="sideName"></b><small id="sideRole"></small><button id="logout" class="btn outline">Sair do sistema</button></div></aside>
 <main><header><div><small id="eyebrow">PAINEL OPERACIONAL</small><h1 id="title">Dashboard</h1><p id="desc">Visão geral do grupamento.</p></div><div id="who"></div></header>
 <section class="view active" id="v-dashboard"><div class="welcome panel"><div><small>BEM-VINDO AO PORTAL</small><h2 id="welcome"></h2><p>Acompanhe o efetivo e registre sua jornada operacional.</p></div><button class="btn primary" data-go="clock">Registrar ponto →</button></div><div class="stats"><article class="panel"><small>Integrantes cadastrados</small><strong id="total">—</strong></article><article class="panel"><small>Efetivo ativo</small><strong id="active">—</strong></article><article class="panel"><small>Em serviço</small><strong id="duty">—</strong></article><article class="panel admin" id="pendingCard" hidden><small>Cadastros pendentes</small><strong id="pending">—</strong></article></div><div class="columns"><article class="panel"><h3>Marcações recentes</h3><div id="recent"></div></article><article class="panel"><small>MINHA JORNADA</small><h3 id="myClock">Ponto não iniciado</h3><p id="myClockText">Registre sua entrada ao iniciar o serviço.</p><button id="quickClock" class="btn primary">Registrar entrada</button></article></div></section>
 <section class="view" id="v-people"><article class="panel"><div class="heading"><div><small>GESTÃO DE PESSOAS</small><h2>Efetivo da GTM</h2></div><button id="reloadPeople" class="btn outline">Atualizar</button></div><div class="filters"><input id="searchPeople" placeholder="Buscar nome, ID ou cargo"><select id="filterStatus"><option value="">Todos os status</option><option>Ativo</option><option>Inativo</option><option>Afastado</option></select></div><div class="tablewrap"><table><thead><tr><th>ID</th><th>Nome</th><th>Patente</th><th>Cargo</th><th>Status</th><th>Entrada</th></tr></thead><tbody id="peopleBody"></tbody></table></div></article></section>
 <section class="view" id="v-clock"><div class="columns"><article class="panel"><small>CONTROLE DE JORNADA</small><h2>Bater ponto</h2><div class="clockbox"><b id="clockLabel">Fora de serviço</b><time id="time">--:--:--</time><small id="date"></small></div><button id="clockButton" class="btn primary">Registrar entrada</button><p id="clockMsg" class="msg"></p></article><article class="panel"><div class="heading"><h3>Histórico de ponto</h3><button id="reloadHistory" class="btn outline">Atualizar</button></div><div id="history"></div></article></div></section>
 <section class="view" id="v-qru"><div class="columns"><article class="panel"><small>REGISTRO OPERACIONAL</small><h2>Novo Registro de QRU</h2><p>O registro será salvo no portal e enviado ao canal do Discord configurado.</p><form id="qruForm"><label>Data</label><input id="qruDate" type="date" required><label>QRU</label><input id="qruName" maxlength="100" required placeholder="Ex.: Tráfico, ATM, abordagem"><label>Envolvidos</label><textarea id="qruInvolved" rows="2" maxlength="1500" required placeholder="Nome(s) e ID(s) dos envolvidos"></textarea><label>Veículo</label><input id="qruVehicle" maxlength="500" required placeholder="Modelo e cor do veículo"><label>Foto / Evidência (link)</label><input id="qruPhoto" type="url" required placeholder="https://..."><button class="btn primary">Registrar QRU e enviar ao Discord</button><p id="qruMsg" class="msg"></p></form></article><article class="panel"><div class="heading"><div><small>HISTÓRICO</small><h3>Últimos registros operacionais</h3></div><button id="reloadQru" class="btn outline">Atualizar</button></div><div id="qruHistory"><p>Carregando registros...</p></div></article></div></section>
-<section class="view" id="v-hierarchy"><article class="panel"><div class="heading"><div><small>ESTRUTURA ORGANIZACIONAL</small><h2>Hierarquia da GTM</h2><p>Efetivo organizado por patente/cargo conforme os dados cadastrados no portal.</p></div><button id="reloadHierarchy" class="btn outline">Atualizar</button></div><div id="hierarchyContent"><p>Carregando hierarquia...</p></div></article></section>
-<section class="view" id="v-materials"><article class="panel"><small>DOCUMENTAÇÃO OPERACIONAL</small><h2>Material de Apoio</h2><p>Consulte os materiais de referência do grupamento. Os links oficiais podem ser adicionados quando forem definidos pelo Comando.</p><div class="material-grid"><article class="material-card"><div class="material-icon">▤</div><div><h3>Manual de Conduta</h3><p>Normas, deveres, procedimentos e regras de conduta da GTM.</p><span class="material-status">Conteúdo a cadastrar</span></div></article><article class="material-card"><div class="material-icon">🏍</div><div><h3>Motocicletas</h3><p>Relação de motocicletas autorizadas, identificação e orientações de uso.</p><span class="material-status">Conteúdo a cadastrar</span></div></article><article class="material-card"><div class="material-icon">▣</div><div><h3>Armamentos</h3><p>Relação de armamentos autorizados e regras internas de utilização.</p><span class="material-status">Conteúdo a cadastrar</span></div></article><article class="material-card"><div class="material-icon">♟</div><div><h3>Fardamentos</h3><p>Uniformes oficiais, variações e orientações de apresentação.</p><span class="material-status">Conteúdo a cadastrar</span></div></article></div></article></section>
+<section class="view" id="v-hierarchy"><article class="panel"><div class="heading"><div><small>ESTRUTURA ORGANIZACIONAL</small><h2>Hierarquia da GTM</h2><p>Efetivo organizado por patente/cargo conforme os dados cadastrados no portal.</p></div><button id="reloadHierarchy" class="btn outline">Atualizar</button></div><div class="official-hierarchy"><h3>Estrutura de cargos da unidade</h3><div class="official-rank-grid"><article><span>01</span><h4>Comandante</h4><p>Autoridade máxima, responsável pela liderança geral da unidade.</p></article><article><span>02</span><h4>Subcomandante</h4><p>Auxilia o Comandante e assume sua função na ausência dele.</p></article><article><span>03</span><h4>Supervisor</h4><p>Supervisiona a equipe e garante o cumprimento das regras.</p></article><article><span>04</span><h4>Capitão</h4><p>Coordena operações e orienta os membros da equipe.</p></article><article><span>05</span><h4>Piloto Oficial</h4><p>Piloto autorizado a exercer suas funções oficialmente.</p></article><article><span>06</span><h4>Probatório</h4><p>Membro em período de avaliação e treinamento.</p></article></div><p class="hierarchy-rule"><b>REGRA GERAL</b> Todos os cargos devem respeitar a hierarquia, seguindo as orientações dos superiores.</p></div><h3 class="current-people-title">Efetivo organizado por cargo</h3><div id="hierarchyContent"><p>Carregando hierarquia...</p></div></article></section>
+<section class="view" id="v-manual"><article class="panel manual-content"><div class="heading"><div><small>DOCUMENTAÇÃO OFICIAL</small><h2>Manual de Conduta da G.T.M.</h2><p>Conteúdo recuperado do portal antigo da Cidade Villa.</p></div></div><div class="manual-note">Este conteúdo reproduz o manual recuperado do portal antigo. Imagens ilustrativas que não estavam incluídas no arquivo principal foram omitidas.</div><section class="manual-section" data-title="1. Introdução" id="introducao">
+<div class="section-heading">
+<span class="section-number">01</span>
+<div><p>APRESENTAÇÃO</p><h2>1. Introdução</h2></div>
+</div>
+<p>O manual de conduta da GTM tem como objetivo centralizar toda informação necessária para conscritos, probatorios e pilotos oficiais da G.T.M., para a melhor absorção de conhecimento dos procedimentos e regras do grupamento.</p>
+<p>A GTM tem prioridade em acompanhamentos à motocicletas. Caso o acompanhamento seja contra um veículo quatro rodas a prioridade é da G.A.R., salvo exceções de veículos de pequeno porte, ou caso a primária peça para a unidade G.T.M. manter a primária do acompanhamento;</p>
+</section><section class="manual-section" data-title="2. Regras" id="regras">
+<div class="section-heading">
+<span class="section-number">02</span>
+<div><p>NORMAS DA UNIDADE</p><h2>2.Regras</h2></div>
+</div>
+<ol class="rules-list">
+<li>Toda e qualquer queda, o oficial do grupamento deverá dar QTA, caso volte a QRU poderá ser retirado de suas funções como oficial da G.T.M.;</li>
+<li>A utilização das motos GS 1300, Tiger 1200 e V-Strom é exclusivamente proibida para as demais unidades e membros não pertencentes à unidade G.T.M.;</li>
+<li>É totalmente proibido a utilização da manobra Roadblock(utilização da moto como barreira para dificultar a passagem);</li>
+<li>É proibido empinar a motocicleta;</li>
+<li>Fica proibido o patrulhamento diário com garupa, cada membro da unidade deve utilizar a sua motocicleta. Salvo em algumas situações(Ex.: Cidade em Cód. Vermelho) e com autorização prévia do COMANDO da unidade ou Sub Comando.(Supervisor e Capitao);</li>
+<li>Probatorios estao proibidos de patrulhar com viaturas quatro rodas;</li>
+<li>Em acompanhamento a veículo quatro rodas, a unidade G.T.M. deve se manter na função de unidade secundária da QRU;</li>
+<li>Caso vá prestar concurso/formulário de outro Grupamento operacional, como CORE, GAR, BOPE ou GRAER, deverá pedir baixa do G.T.M.;</li>
+</ol>
+</section><section class="manual-section" data-title="3. Funções" id="funcoes">
+<div class="section-heading">
+<span class="section-number">03</span>
+<div><p>COMPOSIÇÃO DA UNIDADE</p><h2>3.Funções</h2></div>
+</div>
+<p>Uma unidade G.T.M. pode ser composta por até três motocicletas, onde cada uma tem sua função:</p>
+<div class="role-grid">
+<div class="role-card" data-title="Moto Primária (P1)" id="p1">
+<span>P1</span>
+<h3>1 - Moto Primária(P1):</h3>
+<p>Tem como principal função a coordenação da Unidade em que está, é quem decide o destino da unidade, a quem abordar e quais ocorrências assumir. A moto primária é sempre composta pelo Piloto mais experiente da unidade.</p>
+<p>Nos acompanhamentos, tem como função manter sempre o visual do veículo em que está acompanhando e, caso esteja sozinho, também exerce a função de modular a QRU.</p>
+</div>
+<div class="role-card" data-title="Moto Secundária (P2)" id="p2">
+<span>P2</span>
+<h3>2 - Moto Secundária(P2):</h3>
+<p>Tem como principal função o auxílio ao coordenador, ou seja, irá assumir toda e qualquer responsabilidade atribuída ao mesmo, seja abordagem, modulação ou qualquer outra ordem, também é responsável pelo cuidado do perímetro durante determinadas ocasiões.</p>
+<p>Nos acompanhamentos, tem como principal função a modulação. Também é responsável pelo adiantamento nos becos e sempre deve estar em alerta para assumir caso aconteça algo com o P1.</p>
+</div>
+<div class="role-card" data-title="Moto Terciária (P3)" id="p3">
+<span>P3</span>
+<h3>3 - Moto Terciária(P3):</h3>
+<p>Tem como principal função cuidar da retaguarda da unidade durante o patrulhamento. Geralmente composta pelo Piloto mais inexperiente ou estagiário, tem obrigação de acatar toda e qualquer ordem dada pelo coordenador da unidade.</p>
+<p>Nos acompanhamentos, sua principal função é o adiantamento de becos. Sempre atento e auxiliando o P1 e P2.</p>
+</div>
+</div>
+</section><section class="manual-section" data-title="4. Modulação" id="modulacao">
+<div class="section-heading">
+<span class="section-number">04</span>
+<div><p>COMUNICAÇÃO OPERACIONAL</p><h2>4. Modulação</h2></div>
+</div>
+<p>Parte vital do trabalho militar dentro do DPM-V, a modulação é algo muito prezado dentro da GTM, por isso alguns padrões são criados para que a qualidade da mesma seja mantida dentro do grupamento.</p>
+<div class="topic-block" data-title="4.1 Comunicação no /pr" id="pr">
+<h3>4.1 - Comunicação no /pr</h3>
+<p>O chat da polícia é utilizado para passarmos informações que não são necessárias serem passadas na rádio, segue alguns exemplos da utilização do /pr pela GTM.</p>
+<div class="radio-example"><small>Entrada em serviço</small><p>QAP Central, 3° Sargento Neto (Comando 2°ESQ/GTM-DPJ) iniciando serviço!</p></div>
+<div class="radio-example"><small>Saída de serviço</small><p>QAP Central, 3° Sargento Neto (Comando 2°ESQ/GTM-DPJ) indo de QTX!</p></div>
+</div>
+<div class="topic-block" data-title="4.2 Comunicação na Central" id="central">
+<h3>4.2 - Comunicação na Central</h3>
+<p>A modulação deverá ser curta e breve na central, para que os GTMs tenham foco no acompanhamento, modulando apenas o necessário, é papel do piloto julgar quando é necessário a modulação durante o acompanhamento.</p>
+<div class="radio-example"><small>Modulação de deslocamento</small><p>QAP Central, Unidade GTM, QTI do Caixa Eletrônico, (X) metros/km.</p></div>
+<p>Estabelecer a comunicação na central, informar a unidade que está a caminho (2 motos = Equipe e 3 motos = 1 Unidade), caso esteja sozinho informe que uma GTM está QTI.</p>
+<div class="radio-example"><small>Modulação de Acompanhamento</small><p>QAP Central, Akuma na praça, sentido Sport Race;</p></div>
+<p>Estabeleça o contato com a central, informe QTH atual, informe QTH futuro, caso mude o rumo corrija a informação.</p>
+</div>
+</section><section class="manual-section" data-title="5. Posicionamento" id="posicionamento">
+<div class="section-heading">
+<span class="section-number">05</span>
+<div><p>PADRÕES OPERACIONAIS</p><h2>5. Posicionamento</h2></div>
+</div>
+<div class="topic-block" data-title="5.1 Durante patrulhamento" id="patrulhamento">
+<h3>5.1 - Durante patrulhamento</h3>
+<p>A formação de uma unidade do Grupamento Tático de Motocicletas consiste em até 3 motos. Independente se duas ou três, todas devem manter o formato “serrote” onde a primeira moto fica sempre à direita da via, a segunda deve manter um pouco atrás e para a esquerda, e caso tenha a terceira, ela se mantém atrás da segunda moto, alinhada com a primeira moto.</p>
+<figure>
+
+<figcaption>Formação durante patrulhamento</figcaption>
+</figure>
+<p>Este padrão deve sempre ser mantido, visando a segurança de todas as motos em qualquer tipo de situação. Nesta formação, é possível realizar qualquer tipo de manobra sem que a outra corra risco.</p>
+</div>
+<div class="topic-block" data-title="5.2 Durante abordagem" id="abordagem">
+<h3>5.2 - Durante abordagem</h3>
+<p>Antes de qualquer abordagem, o P1 irá decidir a quem abordar e o P2 irá modular enquanto o P1 dá a voz e realiza os primeiros procedimentos, e o P3 fará o perímetro.</p>
+<p>Durante a abordagem, as motos realizarão uma formação em “L”, onde a primeira moto posicionará na lateral do veículo, a segunda na diagonal e a terceira logo atrás do veículo, sempre de olho na retaguarda. Segue o exemplo na imagem abaixo:</p>
+<figure>
+
+<figcaption>Formação em “L”</figcaption>
+</figure>
+<p>Vale ressaltar que esta formação deve ser seguida à risca, pois garantirá a segurança de todos os membros da unidade e dará liberdade para efetuar qualquer disparo se necessário, evitando qualquer fogo amigo. No caso de fuga da abordagem, todas as motos estão bem posicionadas evitando qualquer tipo de atraso no seu embarque.</p>
+</div>
+<div class="topic-block" data-title="5.2.1 Durante abordagem de alto risco" id="alto-risco">
+<h3>5.2.1 - Durante abordagem de alto risco</h3>
+<p>O posicionamento será no mesmo padrão em “L” (citado acima), porém as motos irão ficar rotacionando no próprio eixo e apontando arma. Sempre em movimento, nunca parado.</p>
+</div>
+<div class="topic-block" data-title="5.3 Estacionamento" id="estacionamento">
+<h3>5.3 - Estacionamento</h3>
+<p>Ao efetuar o estacionamento das motocicletas, todas deverão manter com as duas rodas no mesmo lugar (Ex.: Roda dianteira na rua, roda traseira também. Roda dianteira na calçada, roda traseira também) e não com uma roda na rua e a outra na calçada. Assim como mostra a imagem abaixo:</p>
+<figure>
+
+<figcaption>Padrão de estacionamento</figcaption>
+</figure>
+<p>Esse padrão deve ser sempre seguido.</p>
+</div>
+</section></article></section><section class="view" id="v-materials"><article class="panel"><small>DOCUMENTAÇÃO OPERACIONAL</small><h2>Material de Apoio</h2><p>Consulte os materiais de referência do grupamento. Os links oficiais podem ser adicionados quando forem definidos pelo Comando.</p><div class="material-grid"><article class="material-card"><div class="material-icon">▤</div><div><h3>Manual de Conduta</h3><p>Normas, deveres, procedimentos e regras de conduta da GTM.</p><span class="material-status">Conteúdo a cadastrar</span></div></article><article class="material-card"><div class="material-icon">🏍</div><div><h3>Motocicletas</h3><p>Relação de motocicletas autorizadas, identificação e orientações de uso.</p><span class="material-status">Conteúdo a cadastrar</span></div></article><article class="material-card"><div class="material-icon">▣</div><div><h3>Armamentos</h3><p>Relação de armamentos autorizados e regras internas de utilização.</p><span class="material-status">Conteúdo a cadastrar</span></div></article><article class="material-card"><div class="material-icon">♟</div><div><h3>Fardamentos</h3><p>Uniformes oficiais, variações e orientações de apresentação.</p><span class="material-status">Conteúdo a cadastrar</span></div></article></div></article></section>
 <section class="view" id="v-approvals"><article class="panel"><div class="heading"><div><small>ADMINISTRAÇÃO</small><h2>Aprovações de cadastro</h2></div><button id="reloadApprovals" class="btn outline">Atualizar</button></div><div class="tablewrap"><table><thead><tr><th>ID</th><th>Nome</th><th>Cargo solicitado</th><th>Data</th><th>Ações</th></tr></thead><tbody id="approvalBody"></tbody></table></div><p id="approvalMsg" class="msg"></p></article></section>
 <section class="view" id="v-profile"><article class="panel"><small>CONTA</small><h2>Meu perfil</h2><div class="profile"><div><small>ID</small><b id="profileId"></b></div><div><small>Nome</small><b id="profileName"></b></div><div><small>Cargo</small><b id="profileRole"></b></div></div></article></section></main></div><script src="/app.js" defer></script></body></html>
