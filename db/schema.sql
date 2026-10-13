@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS users(
  id BIGSERIAL PRIMARY KEY, passport_id VARCHAR(32) UNIQUE NOT NULL,
  full_name VARCHAR(120) NOT NULL, badge VARCHAR(60) NOT NULL DEFAULT '',
- rank VARCHAR(80) NOT NULL DEFAULT '', role VARCHAR(80) NOT NULL DEFAULT 'Probatório',
+ rank VARCHAR(80) NOT NULL DEFAULT '', role VARCHAR(80) NOT NULL DEFAULT 'Piloto Probatório',
  status VARCHAR(20) NOT NULL DEFAULT 'Ativo' CHECK(status IN ('Ativo','Inativo','Afastado','Pendente')),
  password_hash TEXT, is_admin BOOLEAN NOT NULL DEFAULT FALSE,
  access_status VARCHAR(20) NOT NULL DEFAULT 'APROVADO' CHECK(access_status IN ('PENDENTE','APROVADO','REJEITADO')),

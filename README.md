@@ -6,7 +6,7 @@
 - ID definido por `ADMIN_ID` no Render é o único administrador técnico; mantenha esse valor como `284` no serviço Render.
 - Comandante e Subcomandante podem aprovar/rejeitar cadastros e editar perfis operacionais.
 - A edição de perfis é verificada no backend; usuários comuns não podem alterar integrantes.
-- Novos cadastros públicos entram como Probatório; cargos superiores devem ser atribuídos por autoridade autorizada.
+- Novos cadastros públicos podem solicitar um dos sete cargos disponíveis; Comandante e Subcomandante só podem ser aprovados pelo administrador do sistema.
 - Mantidos dashboard, login, QRU/Discord, ponto, hierarquia e materiais.
 
 ## Publicação

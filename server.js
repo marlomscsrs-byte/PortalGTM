@@ -7,7 +7,7 @@ const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.N
 app.set("trust proxy",1);app.use(helmet({contentSecurityPolicy:false}));app.use(express.json({limit:"100kb"}));
 app.use(session({store:new PgSession({pool,tableName:"user_sessions",createTableIfMissing:true}),name:"gtm.sid",secret:process.env.SESSION_SECRET,resave:false,saveUninitialized:false,cookie:{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",maxAge:43200000}}));
 app.use(express.static(path.join(__dirname,"public")));
-const roles=["Comandante","Subcomandante","Supervisor","Capitão","Piloto Veterano","Piloto Oficial","Piloto","Probatório"];
+const roles=["Comandante", "Subcomandante", "Supervisor", "Capitão", "Piloto Veterano", "Piloto Oficial", "Piloto Probatório"];
 const clean=v=>String(v??"").trim(), me=req=>req.session.user;
 const ADMIN_ID=clean(process.env.ADMIN_ID||"284");
 const commandRoles=["Comandante","Subcomandante"];
@@ -44,7 +44,7 @@ app.post("/api/auth/register",async(q,s,n)=>{try{
  const id=clean(q.body.passportId),name=clean(q.body.fullName),role=clean(q.body.role),pass=String(q.body.password||"");
  if(!/^\d{1,12}$/.test(id))throw fail(400,"ID numérico inválido.");
  if(name.length<2||name.length>120)throw fail(400,"Informe seu nome completo.");
- if(role!=="Probatório")throw fail(400,"Novos cadastros entram como Probatório. O Comando poderá ajustar o cargo após a aprovação.");
+ if(!roles.includes(role))throw fail(400,"Selecione um dos cargos disponíveis.");
  if(pass.length<8||!/[A-Z]/.test(pass)||!/[a-z]/.test(pass)||!/\d/.test(pass))throw fail(400,"Senha: mínimo 8 caracteres, maiúscula, minúscula e número.");
  if((await pool.query("SELECT 1 FROM users WHERE passport_id=$1 AND access_status='APROVADO'",[id])).rowCount)throw fail(409,"Este ID já possui acesso.");
  if((await pool.query("SELECT 1 FROM access_requests WHERE passport_id=$1 AND status='PENDENTE'",[id])).rowCount)throw fail(409,"Já existe solicitação pendente para este ID.");
@@ -70,7 +70,7 @@ app.get("/api/dashboard",auth,async(q,s,n)=>{try{
 }catch(e){n(e)}});
 app.get("/api/people",auth,async(q,s,n)=>{try{
  const term="%"+clean(q.query.q)+"%",status=clean(q.query.status);
- const r=await pool.query(`SELECT id,passport_id,full_name,badge,rank,role,status,entry_date FROM users WHERE access_status='APROVADO' AND (full_name ILIKE $1 OR passport_id ILIKE $1 OR role ILIKE $1) AND ($2='' OR status=$2) ORDER BY CASE role WHEN 'Comandante' THEN 1 WHEN 'Subcomandante' THEN 2 WHEN 'Supervisor' THEN 3 WHEN 'Capitão' THEN 4 WHEN 'Piloto Veterano' THEN 5 WHEN 'Piloto Oficial' THEN 6 WHEN 'Piloto' THEN 7 WHEN 'Probatório' THEN 8 ELSE 9 END,full_name`,[term,status]);s.json({people:r.rows});
+ const r=await pool.query(`SELECT id,passport_id,full_name,badge,rank,role,status,entry_date FROM users WHERE access_status='APROVADO' AND (full_name ILIKE $1 OR passport_id ILIKE $1 OR role ILIKE $1) AND ($2='' OR status=$2) ORDER BY CASE role WHEN 'Comandante' THEN 1 WHEN 'Subcomandante' THEN 2 WHEN 'Supervisor' THEN 3 WHEN 'Capitão' THEN 4 WHEN 'Piloto Veterano' THEN 5 WHEN 'Piloto Oficial' THEN 6 WHEN 'Piloto Probatório' THEN 7 ELSE 8 END,full_name`,[term,status]);s.json({people:r.rows});
 }catch(e){n(e)}});
 
 app.put("/api/people/:passportId",commandAccess,async(q,s,n)=>{try{
@@ -137,7 +137,7 @@ app.get("/api/admin/access-requests",commandAccess,async(q,s,n)=>{try{const r=aw
 app.post("/api/admin/access-requests/:id/review",commandAccess,async(q,s,n)=>{const c=await pool.connect();try{
  const id=Number(q.params.id),decision=clean(q.body.decision).toUpperCase(),note=clean(q.body.note);if(!Number.isInteger(id)||!["APROVADO","REJEITADO"].includes(decision))throw fail(400,"Solicitação inválida.");
  await c.query("BEGIN");const found=await c.query("SELECT * FROM access_requests WHERE id=$1 FOR UPDATE",[id]);if(!found.rowCount||found.rows[0].status!=="PENDENTE")throw fail(409,"Solicitação já analisada ou não encontrada.");
- const r=found.rows[0];if(decision==="APROVADO"){
+ const r=found.rows[0];if(decision==="APROVADO"&&["Comandante","Subcomandante"].includes(r.requested_role)&&!me(q).isAdmin)throw fail(403,"Somente o administrador do sistema pode aprovar os cargos de Comandante ou Subcomandante.");if(decision==="APROVADO"){
  const old=await c.query("SELECT id FROM users WHERE passport_id=$1 FOR UPDATE",[r.passport_id]);
  if(old.rowCount)await c.query("UPDATE users SET full_name=$2,role=$3,status='Ativo',password_hash=$4,access_status='APROVADO',approved_at=NOW(),approved_by=$5,updated_at=NOW() WHERE passport_id=$1",[r.passport_id,r.full_name,r.requested_role,r.password_hash,q.session.user.id]);
  else await c.query("INSERT INTO users(passport_id,full_name,role,status,password_hash,is_admin,access_status,requested_at,approved_at,approved_by,entry_date) VALUES($1,$2,$3,'Ativo',$4,FALSE,'APROVADO',$5,NOW(),$6,CURRENT_DATE)",[r.passport_id,r.full_name,r.requested_role,r.password_hash,r.requested_at,q.session.user.id]);
