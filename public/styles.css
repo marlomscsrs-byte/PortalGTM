@@ -124,3 +124,11 @@ header p{font-size:.94rem;color:#aab5c0}
 @media(max-width:1050px){.columns{grid-template-columns:1fr}.welcome{grid-template-columns:minmax(0,1fr) auto}.stats{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}}
 @media(max-width:720px){.sidebar{width:270px}main{padding:20px 14px}header{gap:12px}header h1{font-size:2rem}header #who{white-space:normal}#who{align-self:flex-start}.welcome{grid-template-columns:1fr;gap:20px;padding:22px}.welcome .btn{width:100%;white-space:normal}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stats .panel{min-height:105px;padding:16px}.stats strong{font-size:1.9rem}.columns>.panel{min-height:unset}.panel{padding:18px}}
 @media(max-width:420px){.stats{grid-template-columns:1fr}.profile{grid-template-columns:1fr}.welcome h2{font-size:1.35rem}}
+
+/* Emblema oficial acima do nome na identidade da barra lateral */
+.sidebrand{flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;padding:8px 8px 20px}
+.sidebrand-emblem{display:block;width:72px;height:72px;object-fit:cover;border:1px solid #505963;border-radius:12px;background:#090a0c;box-shadow:0 7px 20px #0008}
+.sidebrand-text{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.sidebrand-text b{font-size:.94rem;letter-spacing:.025em}
+.sidebrand-text small{font-size:.57rem;margin:0;letter-spacing:.11em}
+@media(max-width:720px){.sidebrand-emblem{width:64px;height:64px}}
