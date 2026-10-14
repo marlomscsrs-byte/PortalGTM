@@ -224,3 +224,20 @@ header p{font-size:.94rem;color:#aab5c0}
 @media(max-width:1100px){#v-dashboard .stats{grid-template-columns:repeat(2,minmax(0,1fr))}#v-dashboard .quick-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){#v-dashboard .welcome{grid-template-columns:1fr;gap:22px;min-height:300px;padding:22px;background-position:58% center}#v-dashboard .welcome-action{align-items:stretch}#v-dashboard .welcome .btn{width:100%}#v-dashboard .welcome-tags{gap:8px;font-size:.56rem}#v-dashboard .dashboard-columns>.panel{min-height:unset;padding:18px}#v-dashboard .quick-actions{padding:18px}#v-dashboard .quick-action-grid{grid-template-columns:1fr 1fr;gap:8px}#v-dashboard .quick-action{padding:12px}#v-dashboard .stat-card{padding:15px;min-height:122px}#v-dashboard .stat-label{align-items:flex-start;gap:8px}#v-dashboard .stat-icon{width:28px;height:28px;flex-basis:28px}}
 @media(max-width:420px){#v-dashboard .stats{grid-template-columns:1fr 1fr}#v-dashboard .stat-label{display:block}#v-dashboard .stat-icon{margin-bottom:8px}#v-dashboard .quick-action-grid{grid-template-columns:1fr}}
+
+
+/* Identidade visual GTM — camuflagem urbana escura */
+body {
+  background-color: #050607;
+  background-image: linear-gradient(rgba(3, 4, 6, .76), rgba(3, 4, 6, .82)), url("/camuflagem-gtm.png");
+  background-position: center center;
+  background-size: cover;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+#app { background: transparent; }
+.sidebar { background: rgba(7, 9, 12, .94); backdrop-filter: blur(7px); }
+main { background: rgba(5, 7, 9, .14); }
+.panel { background: linear-gradient(145deg, rgba(25, 30, 37, .96), rgba(13, 16, 20, .96)); }
+.welcome { background-image: linear-gradient(100deg, rgba(10, 12, 15, .88), rgba(10, 12, 15, .48)); }
+@media (max-width: 720px) { body { background-attachment: scroll; } }
