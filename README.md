@@ -33,3 +33,11 @@ A imagem `public/hero-gtm.webp` é utilizada como fundo do cartão de boas-vinda
 
 ### Dashboard refinado
 O Dashboard apresenta Hero Banner, quatro indicadores (o cartão de cadastros pendentes é exibido somente para usuários com permissão de gestão), marcações recentes, duração do ponto aberto e atalhos para QRU, Hierarquia, Manual de Conduta e Material de Apoio. O cálculo da duração é apenas visual e usa o horário de entrada já retornado pela API de ponto.
+
+## Relatório de Jornada — 14/10/2026
+- Adicionada a área Relatório de Jornada, visível somente ao administrador, Comandante e Subcomandante.
+- Filtros por data inicial e final, total de horas, quantidade de integrantes e jornadas.
+- Ranking de integrantes por horas acumuladas e detalhamento das entradas/saídas.
+- Exportação CSV compatível com Excel, com ID, patente, cargo, horários, duração e situação.
+- Duração de jornadas abertas calculada até o momento da consulta; datas interpretadas no fuso `America/Sao_Paulo`.
+- Backend protege os endpoints de consulta e exportação usando a autorização de gestão existente. Não exige novas tabelas ou migração.
