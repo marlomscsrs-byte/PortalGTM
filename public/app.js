@@ -18,8 +18,46 @@ async function loadHistory(){try{const d=await api("/api/clock/history");$("#his
 async function loadApprovals(){try{const d=await api("/api/admin/access-requests");$("#badge").textContent=d.requests.length||"";$("#pending").textContent=d.requests.length;$("#approvalBody").innerHTML=d.requests.length?d.requests.map(r=>`<tr><td>${esc(r.passport_id)}</td><td>${esc(r.full_name)}</td><td>${esc(r.requested_role)}</td><td>${date(r.requested_at)}</td><td><div class="actions"><button class="btn approve" data-decision="APROVADO" data-id="${r.id}">Aprovar</button><button class="btn reject" data-decision="REJEITADO" data-id="${r.id}">Rejeitar</button></div></td></tr>`).join(""):'<tr><td colspan="5">Nenhuma solicitação pendente.</td></tr>'}catch(e){$("#approvalBody").innerHTML=`<tr><td colspan="5">${esc(e.message)}</td></tr>`}}
 async function loadQru(){try{const d=await api("/api/operational-records");$("#qruHistory").innerHTML=d.records.length?d.records.map(r=>`<div class="history-row qru-row"><div><b>#${esc(r.id)} · ${esc(r.qru)}</b><small>Data: ${r.occurred_at?new Date(r.occurred_at).toLocaleDateString("pt-BR"):date(r.created_at)} · Piloto: ${esc(r.reporter_name)} (ID ${esc(r.reporter_passport_id)})</small><p>Envolvidos: ${esc(r.involved||"—")}</p><p>Veículo: ${esc(r.vehicle||"—")}</p><small>Discord: ${esc(r.discord_status||"PENDENTE")}</small>${r.photo_url?`<p><a href="${esc(r.photo_url)}" target="_blank" rel="noopener noreferrer">Abrir foto / evidência</a></p>`:""}</div></div>`).join(""):"<p>Nenhum registro operacional até agora.</p>"}catch(e){$("#qruHistory").textContent=e.message}}
 async function submitQru(e){e.preventDefault();msg($("#qruMsg"),"Salvando registro...");const body={date:$("#qruDate").value,qru:$("#qruName").value.trim(),involved:$("#qruInvolved").value.trim(),vehicle:$("#qruVehicle").value.trim(),photoUrl:$("#qruPhoto").value.trim()};try{const r=await api("/api/operational-records",{method:"POST",body:JSON.stringify(body)});msg($("#qruMsg"),r.message,r.discordSent?"success":"");toast(r.message);$("#qruForm").reset();await loadQru()}catch(e){msg($("#qruMsg"),e.message,"error")}}
-async function editPerson(b){const passportId=b.dataset.editPerson;if(passportId===user.passportId&&!user.isAdmin){toast("Somente o administrador pode editar o perfil administrativo.");return}const fullName=prompt("Nome completo:",b.dataset.name);if(fullName===null)return;const rank=prompt("Patente (opcional):",b.dataset.rank);if(rank===null)return;const roleOptions=["Comandante", "Subcomandante", "Supervisor", "Capitão", "Piloto Veterano", "Piloto Oficial", "Piloto Probatório"];let role=prompt("Cargo atual: "+b.dataset.role+"\nDigite um dos cargos: "+roleOptions.join(", "),b.dataset.role);if(role===null)return;role=role.trim();if(!roleOptions.includes(role)){toast("Cargo inválido.");return}const status=prompt("Status: Ativo, Inativo ou Afastado",b.dataset.status);if(status===null)return;if(!["Ativo","Inativo","Afastado"].includes(status.trim())){toast("Status inválido.");return}const entryDate=prompt("Data de entrada (AAAA-MM-DD; deixe em branco para manter):",b.dataset.entry||"");if(entryDate===null)return;try{const r=await api("/api/people/"+encodeURIComponent(passportId),{method:"PUT",body:JSON.stringify({fullName:fullName.trim(),rank:rank.trim(),role,status:status.trim(),entryDate:entryDate.trim()})});toast(r.message);await Promise.all([loadPeople(),loadHierarchy()])}catch(e){toast(e.message)}}
-async function review(id,decision){const note=decision==="REJEITADO"?(prompt("Motivo (opcional):")||""):"";if(!confirm(decision==="APROVADO"?"Aprovar e adicionar ao efetivo?":"Rejeitar cadastro?"))return;try{const r=await api(`/api/admin/access-requests/${id}/review`,{method:"POST",body:JSON.stringify({decision,note})});msg($("#approvalMsg"),r.message,"success");toast(r.message);await Promise.all([loadApprovals(),loadDash(),loadPeople()])}catch(e){msg($("#approvalMsg"),e.message,"error")}}
+const roleOptions=["Comandante","Subcomandante","Supervisor","Capitão","Piloto Veterano","Piloto Oficial","Piloto Probatório"];
+const rankOptions=["Recruta","Soldado","Cabo","3SGT","2SGT","1SGT","Subtenente","Aspirante a Oficial","2º Tenente","1º Tenente","Capitão","Major","Tenente-Coronel","Coronel"];
+let modalSubmitAction=null;
+function closeModal(){const root=$("#modalRoot");root.hidden=true;root.setAttribute("aria-hidden","true");$("#modalForm").reset();$("#modalFields").innerHTML="";$("#modalMessage").textContent="";modalSubmitAction=null}
+function openModal({title,description="",fields,submitLabel="Confirmar",danger=false,onSubmit}){
+ const root=$("#modalRoot");$("#modalTitle").textContent=title;$("#modalDescription").textContent=description;
+ $("#modalFields").innerHTML=fields;$("#modalSubmit").textContent=submitLabel;$("#modalSubmit").classList.toggle("danger",danger);modalSubmitAction=onSubmit;
+ root.hidden=false;root.setAttribute("aria-hidden","false");const first=$("#modalFields input, #modalFields select, #modalFields textarea");if(first)first.focus();
+}
+function modalField(label,id,value,type="text",required=false,extra=""){
+ return `<label class="modal-field" for="${id}">${label}<input id="${id}" name="${id}" type="${type}" value="${esc(value??"")}" ${required?"required":""} ${extra}></label>`;
+}
+function modalSelect(label,id,options,value,placeholder="Selecione"){
+ return `<label class="modal-field" for="${id}">${label}<select id="${id}" name="${id}" required><option value="">${placeholder}</option>${options.map(v=>`<option value="${esc(v)}" ${v===value?"selected":""}>${esc(v)}</option>`).join("")}</select></label>`;
+}
+async function editPerson(b){
+ const passportId=b.dataset.editPerson;
+ if(passportId===user.passportId&&!user.isAdmin){toast("Somente o administrador pode editar o perfil administrativo.");return}
+ const rankValue=rankOptions.includes(b.dataset.rank)?b.dataset.rank:"";
+ openModal({title:"Editar perfil do integrante",description:`Atualize os dados operacionais do ID ${passportId}.`,submitLabel:"Salvar perfil",fields:
+  modalField("Nome completo","editFullName",b.dataset.name,"text",true,'maxlength="120"')+
+  modalSelect("Patente","editRank",rankOptions,rankValue,"Selecione a patente")+
+  modalSelect("Cargo funcional","editRole",roleOptions,b.dataset.role,"Selecione o cargo")+
+  modalSelect("Situação","editStatus",["Ativo","Inativo","Afastado"],b.dataset.status,"Selecione a situação")+
+  modalField("Data de entrada","editEntry",b.dataset.entry||"","date",false),
+  onSubmit:async()=>{
+   const fullName=$("#editFullName").value.trim(),rank=$("#editRank").value,role=$("#editRole").value,status=$("#editStatus").value,entryDate=$("#editEntry").value;
+   if(fullName.length<2){msg($("#modalMessage"),"Informe o nome completo.","error");return}
+   try{const r=await api("/api/people/"+encodeURIComponent(passportId),{method:"PUT",body:JSON.stringify({fullName,rank,role,status,entryDate})});closeModal();toast(r.message);await Promise.all([loadPeople(),loadHierarchy()])}catch(e){msg($("#modalMessage"),e.message,"error")}
+  }
+ });
+}
+async function review(id,decision){
+ const approving=decision==="APROVADO";
+ openModal({title:approving?"Aprovar cadastro":"Rejeitar cadastro",description:approving?"O integrante será adicionado ao efetivo e poderá acessar o portal.":"Informe, se desejar, o motivo da rejeição.",submitLabel:approving?"Aprovar cadastro":"Rejeitar cadastro",danger:!approving,fields:approving?'<div class="modal-callout">Confirme a aprovação desta solicitação de acesso.</div>':'<label class="modal-field" for="reviewNote">Motivo (opcional)<textarea id="reviewNote" name="reviewNote" rows="4" maxlength="1000" placeholder="Descreva o motivo, se necessário"></textarea></label>',
+  onSubmit:async()=>{const note=approving?"":($("#reviewNote")?.value.trim()||"");try{const r=await api(`/api/admin/access-requests/${id}/review`,{method:"POST",body:JSON.stringify({decision,note})});closeModal();msg($("#approvalMsg"),r.message,"success");toast(r.message);await Promise.all([loadApprovals(),loadDash(),loadPeople()])}catch(e){msg($("#modalMessage"),e.message,"error")}}
+ });
+}
+$("#modalForm").addEventListener("submit",async e=>{e.preventDefault();if(modalSubmitAction){const button=$("#modalSubmit");button.disabled=true;try{await modalSubmitAction()}finally{button.disabled=false}}});
+$("#modalX").addEventListener("click",closeModal);$("#modalCancel").addEventListener("click",closeModal);$("#modalRoot").addEventListener("click",e=>{if(e.target.matches("[data-modal-close]"))closeModal()});
 function formatPhone(value){const d=String(value||"").replace(/\D/g,"").slice(0,6);return d.length>3?`${d.slice(0,3)}-${d.slice(3)}`:d}
 $("#profilePhone").addEventListener("input",e=>{e.target.value=formatPhone(e.target.value)});
 $("#profileForm").addEventListener("submit",async e=>{e.preventDefault();msg($("#profileMsg"),"Salvando telefone...");try{const r=await api("/api/profile",{method:"PUT",body:JSON.stringify({phone:$("#profilePhone").value})});user=r.user;$("#profilePhone").value=user.phone||"";msg($("#profileMsg"),r.message,"success");toast(r.message)}catch(err){msg($("#profileMsg"),err.message,"error")}});
@@ -29,7 +67,7 @@ $("#toRegister").onclick=()=>{$("#login").hidden=true;$("#register").hidden=fals
 $("#logout").onclick=async()=>{try{await api("/api/auth/logout",{method:"POST",body:"{}"})}catch{}user=null;showAuth()};
 $$(".nav").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));$$("[data-go]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.go)));
 $("#quickClock").onclick=toggleClock;$("#clockButton").onclick=toggleClock;$("#refreshDash").onclick=loadDash;$("#reloadPeople").onclick=loadPeople;$("#reloadHierarchy").onclick=loadHierarchy;$("#searchPeople").oninput=()=>{clearTimeout(loadPeople.t);loadPeople.t=setTimeout(loadPeople,250)};$("#filterStatus").onchange=loadPeople;$("#reloadHistory").onclick=loadHistory;$("#reloadApprovals").onclick=loadApprovals;$("#reloadQru").onclick=loadQru;$("#qruForm").addEventListener("submit",submitQru);$("#approvalBody").onclick=e=>{const b=e.target.closest("[data-decision]");if(b)review(b.dataset.id,b.dataset.decision)};$("#peopleBody").onclick=e=>{const b=e.target.closest("[data-edit-person]");if(b)editPerson(b)};
-document.addEventListener("keydown",e=>{if(e.key==="Escape")$(".sidebar").classList.remove("open")});const mobile=document.createElement("button");mobile.className="mobile-toggle";mobile.textContent="☰";mobile.onclick=()=>$(".sidebar").classList.toggle("open");document.querySelector("main").prepend(mobile);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!$("#modalRoot").hidden)closeModal();$(".sidebar").classList.remove("open")}});const mobile=document.createElement("button");mobile.className="mobile-toggle";mobile.textContent="☰";mobile.onclick=()=>$(".sidebar").classList.toggle("open");document.querySelector("main").prepend(mobile);
 $("#qruDate").value=new Date().toLocaleDateString("en-CA");
 function tick(){$("#time").textContent=new Date().toLocaleTimeString("pt-BR");$("#date").textContent=new Date().toLocaleDateString("pt-BR",{dateStyle:"full"})}setInterval(tick,1000);tick();
 (async()=>{try{const r=await api("/api/auth/me");if(r.user){user=r.user;showApp()}else showAuth()}catch{showAuth()}})();

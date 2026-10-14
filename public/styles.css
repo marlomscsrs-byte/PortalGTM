@@ -241,3 +241,32 @@ main { background: rgba(5, 7, 9, .08); }
 .panel { background: linear-gradient(145deg, rgba(25, 30, 37, .96), rgba(13, 16, 20, .96)); }
 .welcome { background-image: linear-gradient(100deg, rgba(10, 12, 15, .88), rgba(10, 12, 15, .48)); }
 @media (max-width: 720px) { body { background-attachment: scroll; } }
+
+/* Modais próprios do PortalGTM: substituem diálogos nativos do navegador */
+.modal-root[hidden]{display:none!important}
+.modal-root{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;}
+.modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(7px);animation:modalFade .16s ease-out}
+.custom-modal{position:relative;z-index:1;width:min(100%,560px);max-height:min(88vh,820px);overflow:auto;padding:28px;background:linear-gradient(145deg,rgba(26,32,39,.99),rgba(12,15,19,.99));border:1px solid #46515d;border-radius:18px;box-shadow:0 28px 100px #000b;animation:modalRise .18s ease-out}
+.custom-modal h2{font-size:1.45rem;margin:8px 36px 8px 0;color:#f3f6f8}
+.custom-modal>p{font-size:.9rem;line-height:1.6;margin-bottom:20px;color:#aeb9c4}
+.modal-kicker{font-size:.65rem;letter-spacing:.15em;font-weight:850;color:#aebdca}
+.modal-x{position:absolute;right:17px;top:15px;width:36px;height:36px;border:1px solid #3d4853;border-radius:10px;background:#151b21;color:#dce3e9;font-size:1.5rem;line-height:1}
+.modal-x:hover{background:#27313b;border-color:#748291}
+.modal-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.modal-field{display:flex;flex-direction:column;gap:7px;min-width:0;color:#dbe2e8;font-size:.78rem;font-weight:750}
+.modal-field input,.modal-field select,.modal-field textarea{width:100%;min-height:44px;padding:11px 12px;border:1px solid #3c4854;border-radius:9px;background:#0b0f13;color:#f1f4f7;font:inherit;font-weight:500;outline:none;transition:border-color .16s,box-shadow .16s,background .16s}
+.modal-field textarea{resize:vertical;min-height:105px;line-height:1.5}
+.modal-field input:focus,.modal-field select:focus,.modal-field textarea:focus{border-color:#a7b5c2;box-shadow:0 0 0 3px #9baab51f;background:#10161c}
+.modal-field select{appearance:none;padding-right:38px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23c6d0d9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid #2e3842}
+.modal-actions .btn{min-width:125px;margin:0}
+.modal-actions .btn.primary{background:linear-gradient(180deg,#e8edf1,#cbd3da);color:#111820}
+.modal-actions .btn.danger{background:#9f3d43;color:#fff;border-color:#bc555b}
+.modal-actions .btn:disabled{opacity:.6;cursor:wait}
+.modal-callout{grid-column:1/-1;padding:15px;border:1px solid #3d4853;border-radius:10px;background:#141b22;color:#d5dee6;font-size:.88rem;line-height:1.6}
+#modalMessage:empty{display:none}
+:where(button,input,select,textarea):focus-visible{outline:2px solid #b9c5cf;outline-offset:2px}
+button,.btn,input,select,textarea{accent-color:#aab6c0}
+@keyframes modalFade{from{opacity:0}to{opacity:1}}
+@keyframes modalRise{from{opacity:0;transform:translateY(9px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:560px){.modal-root{padding:10px}.custom-modal{padding:23px 17px;max-height:92vh;border-radius:14px}.modal-fields{grid-template-columns:1fr;gap:12px}.modal-actions{flex-direction:column-reverse}.modal-actions .btn{width:100%}}

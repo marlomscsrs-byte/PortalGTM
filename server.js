@@ -8,6 +8,7 @@ app.set("trust proxy",1);app.use(helmet({contentSecurityPolicy:false}));app.use(
 app.use(session({store:new PgSession({pool,tableName:"user_sessions",createTableIfMissing:true}),name:"gtm.sid",secret:process.env.SESSION_SECRET,resave:false,saveUninitialized:false,cookie:{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",maxAge:43200000}}));
 app.use(express.static(path.join(__dirname,"public")));
 const roles=["Comandante", "Subcomandante", "Supervisor", "Capitão", "Piloto Veterano", "Piloto Oficial", "Piloto Probatório"];
+const ranks=["Recruta","Soldado","Cabo","3SGT","2SGT","1SGT","Subtenente","Aspirante a Oficial","2º Tenente","1º Tenente","Capitão","Major","Tenente-Coronel","Coronel"];
 const clean=v=>String(v??"").trim(), me=req=>req.session.user;
 const ADMIN_ID=clean(process.env.ADMIN_ID||"284");
 const commandRoles=["Comandante","Subcomandante"];
