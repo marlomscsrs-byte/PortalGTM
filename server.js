@@ -32,6 +32,18 @@ async function bootstrap(){
  )`);
  await pool.query("ALTER TABLE operational_records ALTER COLUMN description SET DEFAULT ''");
  await pool.query("CREATE INDEX IF NOT EXISTS idx_operational_records_created ON operational_records(created_at DESC)");
+ // Preserva o primeiro pedido pendente de cada ID e marca os demais como duplicados,
+ // sem apagar histórico. Depois, uma restrição no PostgreSQL impede novas duplicatas,
+ // inclusive quando duas requisições chegam ao mesmo tempo.
+ await pool.query(`WITH ranked AS (
+   SELECT id, ROW_NUMBER() OVER (PARTITION BY passport_id ORDER BY requested_at ASC, id ASC) AS rn
+   FROM access_requests WHERE status='PENDENTE'
+ )
+ UPDATE access_requests a
+ SET status='REJEITADO', reviewed_at=COALESCE(a.reviewed_at,NOW()),
+     review_note=CASE WHEN COALESCE(a.review_note,'')='' THEN 'Duplicata automática: outra solicitação pendente para este ID foi preservada.' ELSE a.review_note || ' | Duplicata automática: outra solicitação pendente para este ID foi preservada.' END
+ FROM ranked r WHERE a.id=r.id AND r.rn>1`);
+ await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_access_requests_one_pending_per_passport ON access_requests(passport_id) WHERE status='PENDENTE'");
  const id=ADMIN_ID,name=clean(process.env.ADMIN_NAME||"Administrador GTM"),password=clean(process.env.ADMIN_PASSWORD);
  await pool.query("UPDATE users SET is_admin=(passport_id=$1)",[id]);
  if(!id||!password||password.startsWith("troque-")){console.warn("Configure ADMIN_ID e ADMIN_PASSWORD forte para criar o primeiro administrador.");return}
@@ -51,7 +63,7 @@ app.post("/api/auth/register",async(q,s,n)=>{try{
  if((await pool.query("SELECT 1 FROM access_requests WHERE passport_id=$1 AND status='PENDENTE'",[id])).rowCount)throw fail(409,"Já existe solicitação pendente para este ID.");
  await pool.query("INSERT INTO access_requests(passport_id,full_name,requested_role,password_hash) VALUES($1,$2,$3,$4)",[id,name,role,await bcrypt.hash(pass,12)]);
  s.status(201).json({message:"Solicitação enviada. Aguarde a aprovação."});
-}catch(e){n(e)}});
+}catch(e){if(e.code==="23505")return s.status(409).json({error:"Já existe uma solicitação pendente para este ID. Não é necessário enviar novamente."});n(e)}});
 app.post("/api/auth/login",async(q,s,n)=>{try{
  const r=await pool.query("SELECT * FROM users WHERE passport_id=$1",[clean(q.body.passportId)]);
  if(!r.rowCount||!r.rows[0].password_hash||!(await bcrypt.compare(String(q.body.password||""),r.rows[0].password_hash)))throw fail(401,"ID ou senha incorretos.");

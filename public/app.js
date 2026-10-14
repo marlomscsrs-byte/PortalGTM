@@ -68,7 +68,19 @@ function formatPhone(value){const d=String(value||"").replace(/\D/g,"").slice(0,
 $("#profilePhone").addEventListener("input",e=>{e.target.value=formatPhone(e.target.value)});
 $("#profileForm").addEventListener("submit",async e=>{e.preventDefault();msg($("#profileMsg"),"Salvando telefone...");try{const r=await api("/api/profile",{method:"PUT",body:JSON.stringify({phone:$("#profilePhone").value})});user=r.user;$("#profilePhone").value=user.phone||"";msg($("#profileMsg"),r.message,"success");toast(r.message)}catch(err){msg($("#profileMsg"),err.message,"error")}});
 $("#login").addEventListener("submit",async e=>{e.preventDefault();msg($("#loginMsg"),"");try{const r=await api("/api/auth/login",{method:"POST",body:JSON.stringify({passportId:$("#loginId").value.trim(),password:$("#loginPass").value})});user=r.user;showApp()}catch(e){msg($("#loginMsg"),e.message,"error")}});
-$("#register").addEventListener("submit",async e=>{e.preventDefault();msg($("#regMsg"),"");if($("#regPass").value!==$("#regPass2").value)return msg($("#regMsg"),"As senhas não conferem.","error");try{const r=await api("/api/auth/register",{method:"POST",body:JSON.stringify({passportId:$("#regId").value.trim(),fullName:$("#regName").value.trim(),role:$("#regRole").value,password:$("#regPass").value})});msg($("#regMsg"),r.message,"success");$("#register").reset()}catch(e){msg($("#regMsg"),e.message,"error")}});
+let registrationInFlight=false;
+$("#register").addEventListener("submit",async e=>{
+ e.preventDefault();if(registrationInFlight)return;
+ msg($("#regMsg"),"");
+ if($("#regPass").value!==$("#regPass2").value)return msg($("#regMsg"),"As senhas não conferem.","error");
+ const form=$("#register"),submit=form.querySelector('button[type="submit"],button:not([type])');
+ registrationInFlight=true;if(submit){submit.disabled=true;submit.dataset.originalText=submit.dataset.originalText||submit.textContent;submit.textContent="Enviando solicitação..."}
+ try{
+  const r=await api("/api/auth/register",{method:"POST",body:JSON.stringify({passportId:$("#regId").value.trim(),fullName:$("#regName").value.trim(),role:$("#regRole").value,password:$("#regPass").value})});
+  msg($("#regMsg"),r.message,"success");form.reset();
+ }catch(e){msg($("#regMsg"),e.message,"error")}
+ finally{registrationInFlight=false;if(submit){submit.disabled=false;submit.textContent=submit.dataset.originalText||"Enviar solicitação"}}
+});
 $("#toRegister").onclick=()=>{$("#login").hidden=true;$("#register").hidden=false};$("#toLogin").onclick=()=>{$("#register").hidden=true;$("#login").hidden=false};
 $("#logout").onclick=async()=>{try{await api("/api/auth/logout",{method:"POST",body:"{}"})}catch{}user=null;showAuth()};
 $$(".nav").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));$$("[data-go]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.go)));
