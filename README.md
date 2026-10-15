@@ -1,22 +1,22 @@
 # Portal Operacional G.T.M. Villa
 
-Projeto atualizado com as três fotografias fornecidas para o Manual de Conduta.
+Versão com ajustes de jornada no Relatório de Jornada.
 
-## Imagens adicionadas
-- `public/manual-patrulhamento.png` — seção 5.1, Durante patrulhamento.
-- `public/manual-abordagem.png` — seção 5.2, Durante abordagem.
-- `public/manual-estacionamento.png` — seção 5.3, Estacionamento (foto da equipe/motocicletas, conforme solicitado).
+## Ajustes de jornada
+- Ações disponíveis somente para administrador, Comandante e Subcomandante, com autorização validada também no backend.
+- **Fechar ponto:** encerra uma jornada aberta usando o horário atual.
+- **Ajustar horários:** corrige entrada e saída de jornadas abertas ou concluídas; saída em branco mantém o ponto aberto.
+- Toda correção exige justificativa e grava o responsável, integrante, horário antigo, horário novo e justificativa na tabela `audit_log`.
+- A área **Histórico de ajustes** exibe os últimos 100 fechamentos manuais e correções.
+- As alterações usam a tabela existente `clock_entries` e não exigem migração de banco.
 
-As imagens abrem em tamanho maior ao clicar. Os demais módulos e arquivos do portal foram mantidos a partir dos arquivos enviados.
+## Implantação
+1. Substitua os arquivos no repositório pelo conteúdo deste pacote.
+2. Mantenha as variáveis de ambiente já configuradas no Render.
+3. O `render.yaml` mantém `/api/health` como health check.
 
-## Deploy
-Mantenha a estrutura de pastas e publique os arquivos no repositório conectado ao serviço Render. Preserve as variáveis de ambiente já configuradas no Render; não publique segredos no GitHub.
+## Testes executados nesta entrega
+- `node --check server.js`
+- `node --check public/app.js`
 
-## Encerramento manual de ponto
-- No Relatório de Jornada, Administrador, Comandante e Subcomandante podem usar **Fechar ponto** nas jornadas que ainda estão abertas.
-- A saída é registrada com a data e hora atuais. A ação pede confirmação e gera registro de auditoria com o responsável e o integrante afetado.
-- O endpoint de encerramento exige permissão de gestão no servidor; usuários comuns não podem encerrar jornadas de outras pessoas.
-
-## Favicon G.T.M.
-- O favicon e o ícone de tela inicial usam o brasão `public/gtm-emblem.webp`.
-- A referência está no `<head>` de `public/index.html`; o parâmetro de versão ajuda a atualizar o cache do navegador.
+Não foi possível testar ações reais contra o banco de produção nesta sessão. Faça uma verificação com uma conta de gestão e um ponto de teste após o deploy.
