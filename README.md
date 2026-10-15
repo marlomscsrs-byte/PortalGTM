@@ -1,55 +1,13 @@
-# Portal Operacional G.T.M. Villa — versão refinada
+# Portal Operacional G.T.M. Villa
 
-## Atualização desta versão
-- Refinamento visual geral: painéis, cartões, botões, tabelas, estados, hierarquia e navegação.
-- Login com imagem de fundo preenchendo a tela e formulário centralizado.
-- ID definido por `ADMIN_ID` no Render é o único administrador técnico; mantenha esse valor como `284` no serviço Render.
-- Comandante e Subcomandante podem aprovar/rejeitar cadastros e editar perfis operacionais.
-- A edição de perfis é verificada no backend; usuários comuns não podem alterar integrantes.
-- Novos cadastros públicos podem solicitar um dos sete cargos disponíveis; Comandante e Subcomandante só podem ser aprovados pelo administrador do sistema.
-- Mantidos dashboard, login, QRU/Discord, ponto, hierarquia e materiais.
+Projeto atualizado com as três fotografias fornecidas para o Manual de Conduta.
 
-## Publicação
-1. Envie o conteúdo desta pasta ao repositório usado pelo serviço `portal-gtm`, mantendo `server.js`, `package.json`, `render.yaml`, `db/` e `public/` na raiz correta.
-2. No Render, confirme `ADMIN_ID=284`, `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_PASSWORD` e `DISCORD_WEBHOOK_QRU`. Nunca publique segredos no GitHub.
-3. Faça o deploy e teste login, ponto, QRU/Discord, aprovações como ID 284 e como Comandante/Subcomandante, e edição de perfil.
+## Imagens adicionadas
+- `public/manual-patrulhamento.png` — seção 5.1, Durante patrulhamento.
+- `public/manual-abordagem.png` — seção 5.2, Durante abordagem.
+- `public/manual-estacionamento.png` — seção 5.3, Estacionamento (foto da equipe/motocicletas, conforme solicitado).
 
-## Observações de segurança
-- A flag administrativa é sincronizada com o ID definido em `ADMIN_ID` no início do servidor. Se o ambiente Render estiver configurado como `284`, apenas esse ID será administrador técnico.
-- A edição do perfil do ID administrativo e a atribuição dos cargos Comandante/Subcomandante são restritas ao administrador técnico.
-- O backend ainda depende do schema PostgreSQL já existente; nenhuma tabela nova é necessária para esta atualização.
+As imagens abrem em tamanho maior ao clicar. Os demais módulos e arquivos do portal foram mantidos a partir dos arquivos enviados.
 
-
-## Telefone no perfil
-A aba Meu perfil permite que cada integrante informe/atualize seu telefone. O campo formata automaticamente telefones brasileiros como `(00) 00000-0000` (celular) ou `(00) 0000-0000` (fixo). O telefone é opcional e é armazenado na coluna `users.phone`. O servidor cria essa coluna automaticamente no bootstrap, sem exigir execução manual de SQL.
-
-
-### Telefone do RP
-O perfil permite cadastrar telefone fictício do personagem no padrão `XXX-XXX` (seis dígitos). Não use telefone real.
-
-
-## Hero Banner do Dashboard
-A imagem `public/hero-gtm.webp` é utilizada como fundo do cartão de boas-vindas no Dashboard. O texto e o botão continuam dinâmicos no HTML. Nenhuma variável de ambiente ou migração de banco é necessária para esta alteração.
-
-### Dashboard refinado
-O Dashboard apresenta Hero Banner, quatro indicadores (o cartão de cadastros pendentes é exibido somente para usuários com permissão de gestão), marcações recentes, duração do ponto aberto e atalhos para QRU, Hierarquia, Manual de Conduta e Material de Apoio. O cálculo da duração é apenas visual e usa o horário de entrada já retornado pela API de ponto.
-
-## Relatório de Jornada — 14/10/2026
-- Adicionada a área Relatório de Jornada, visível somente ao administrador, Comandante e Subcomandante.
-- Filtros por data inicial e final, total de horas, quantidade de integrantes e jornadas.
-- Ranking de integrantes por horas acumuladas e detalhamento das entradas/saídas.
-- Exportação CSV compatível com Excel, com ID, patente, cargo, horários, duração e situação.
-- Duração de jornadas abertas calculada até o momento da consulta; datas interpretadas no fuso `America/Sao_Paulo`.
-- Backend protege os endpoints de consulta e exportação usando a autorização de gestão existente. Não exige novas tabelas ou migração.
-
-
-## Health check e monitoramento externo
-- `GET /api/health`: verificação leve de vida do processo, responde HTTP 200 sem depender do banco. O Render usa este caminho em `healthCheckPath`.
-- `GET /api/ready`: verifica a conexão com PostgreSQL; responde 200 quando conectado e 503 quando indisponível.
-- Para reduzir o tempo dormindo no plano Free, configure um monitor externo HTTP(s) para acessar `https://SEU-SITE.onrender.com/api/health` a cada 5 minutos. O plano gratuito do UptimeRobot oferece esse intervalo.
-- Configure alertas por e-mail no monitor para saber quando houver falha.
-- Importante: monitoramento externo ajuda a manter tráfego chegando e detectar quedas, mas não garante 100% de disponibilidade. O Render Free pode reiniciar serviços e tem limitações; disponibilidade contínua garantida exige um plano sempre ativo.
-
-## Registro de QRU — seleção de envolvidos
-
-O formulário de QRU agora permite pesquisar integrantes ativos já aprovados no portal por nome ou ID, selecionar vários envolvidos e removê-los antes do envio. O servidor valida os IDs contra o banco de dados e monta o campo **Envolvidos** com nome e ID de cada integrante. O embed do Discord recebe essa lista automaticamente; se ela ultrapassar o limite de um campo do Discord, a lista completa continua salva no histórico do portal. Não é necessária alteração manual no banco de dados.
+## Deploy
+Mantenha a estrutura de pastas e publique os arquivos no repositório conectado ao serviço Render. Preserve as variáveis de ambiente já configuradas no Render; não publique segredos no GitHub.

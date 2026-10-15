@@ -296,3 +296,12 @@ button,.btn,input,select,textarea{accent-color:#aab6c0}
 .qru-person-chip button{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;border:1px solid #52685c;border-radius:7px;background:#1a2c23;color:#e8f3ec;font-size:1.15rem;cursor:pointer}
 .qru-empty-selected{align-self:center;color:#8996a2;font-size:.76rem}
 #v-qru #qruPeopleSearch{margin-top:7px}
+
+
+/* Fotografias do Manual de Conduta — imagens adaptáveis e ampliáveis */
+.manual-content .manual-figure{margin:18px 0 22px;padding:10px;border:1px solid #303a45;border-radius:12px;background:linear-gradient(145deg,#11161b,#090c0f);overflow:hidden}
+.manual-content .manual-figure a{display:block;line-height:0;border-radius:8px;overflow:hidden;cursor:zoom-in}
+.manual-content .manual-figure img{display:block;width:100%;max-height:620px;object-fit:contain;margin:0 auto;border-radius:8px;transition:transform .2s ease}
+.manual-content .manual-figure a:hover img{transform:scale(1.015)}
+.manual-content .manual-figure figcaption{padding:10px 4px 2px;text-align:center;color:#aab6c2;font-size:.78rem;letter-spacing:.025em}
+@media(max-width:600px){.manual-content .manual-figure{padding:6px;margin:14px 0 18px}.manual-content .manual-figure img{max-height:360px}}
