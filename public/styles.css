@@ -305,3 +305,6 @@ button,.btn,input,select,textarea{accent-color:#aab6c0}
 .manual-content .manual-figure a:hover img{transform:scale(1.015)}
 .manual-content .manual-figure figcaption{padding:10px 4px 2px;text-align:center;color:#aab6c2;font-size:.78rem;letter-spacing:.025em}
 @media(max-width:600px){.manual-content .manual-figure{padding:6px;margin:14px 0 18px}.manual-content .manual-figure img{max-height:360px}}
+
+/* Ação administrativa para encerramento manual de jornadas */
+.close-clock-entry{white-space:nowrap;padding:7px 10px;font-size:.76rem;border-color:#826d4c;color:#f0d7a8}.close-clock-entry:hover{background:#342b1e;border-color:#b99a65}

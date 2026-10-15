@@ -11,3 +11,8 @@ As imagens abrem em tamanho maior ao clicar. Os demais módulos e arquivos do po
 
 ## Deploy
 Mantenha a estrutura de pastas e publique os arquivos no repositório conectado ao serviço Render. Preserve as variáveis de ambiente já configuradas no Render; não publique segredos no GitHub.
+
+## Encerramento manual de ponto
+- No Relatório de Jornada, Administrador, Comandante e Subcomandante podem usar **Fechar ponto** nas jornadas que ainda estão abertas.
+- A saída é registrada com a data e hora atuais. A ação pede confirmação e gera registro de auditoria com o responsável e o integrante afetado.
+- O endpoint de encerramento exige permissão de gestão no servidor; usuários comuns não podem encerrar jornadas de outras pessoas.
