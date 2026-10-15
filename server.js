@@ -50,7 +50,10 @@ async function bootstrap(){
  const exists=await pool.query("SELECT id FROM users WHERE passport_id=$1",[id]);if(exists.rowCount)return;
  await pool.query("INSERT INTO users(passport_id,full_name,rank,role,status,password_hash,is_admin,access_status,approved_at,entry_date) VALUES($1,$2,'Administração','Comandante','Ativo',$3,TRUE,'APROVADO',NOW(),CURRENT_DATE)",[id,name,await bcrypt.hash(password,12)]);
 }
-app.get("/api/health",async(_q,s)=>{try{await pool.query("SELECT 1");s.json({ok:true,database:"connected"})}catch{s.status(503).json({ok:false,database:"unavailable"})}});
+// Liveness: endpoint leve para Render e monitor externo. Não depende do banco.
+app.get("/api/health",(_q,s)=>s.status(200).json({ok:true,service:"portal-gtm",status:"alive"}));
+// Readiness: verifica separadamente se o PostgreSQL está acessível.
+app.get("/api/ready",async(_q,s)=>{try{await pool.query("SELECT 1");s.status(200).json({ok:true,database:"connected"})}catch{s.status(503).json({ok:false,database:"unavailable"})}});
 app.get("/api/auth/me",async(q,s,n)=>{try{if(!me(q))return s.json({user:null});const r=await pool.query("SELECT * FROM users WHERE passport_id=$1 AND access_status='APROVADO'",[me(q).passportId]);if(!r.rowCount){q.session.user=null;return s.json({user:null})}q.session.user=publicUser(r.rows[0]);s.json({user:q.session.user})}catch(e){n(e)}});
 app.put("/api/profile",auth,async(q,s,n)=>{try{const phone=clean(q.body.phone);const digits=phone.replace(/\D/g,"");if(phone&&digits.length!==6)throw fail(400,"Informe o telefone do RP com seis números no formato XXX-XXX.");const formatted=digits?`${digits.slice(0,3)}-${digits.slice(3)}`:"";const r=await pool.query("UPDATE users SET phone=$2,updated_at=NOW() WHERE passport_id=$1 AND access_status='APROVADO' RETURNING *",[me(q).passportId,formatted]);if(!r.rowCount)throw fail(404,"Perfil não encontrado.");q.session.user=publicUser(r.rows[0]);s.json({message:"Telefone do RP atualizado com sucesso.",user:q.session.user});}catch(e){n(e)}});
 app.post("/api/auth/register",async(q,s,n)=>{try{
@@ -106,11 +109,17 @@ app.get("/api/operational-records",auth,async(q,s,n)=>{try{
 }catch(e){n(e)}});
 app.post("/api/operational-records",auth,async(q,s,n)=>{const c=await pool.connect();let record;
  try{
-   const qru=clean(q.body.qru),involved=clean(q.body.involved),vehicle=clean(q.body.vehicle),photoUrl=clean(q.body.photoUrl),dateValue=clean(q.body.date);
+   const qru=clean(q.body.qru),vehicle=clean(q.body.vehicle),photoUrl=clean(q.body.photoUrl),dateValue=clean(q.body.date);
+  const involvedIds=Array.isArray(q.body.involvedIds)?[...new Set(q.body.involvedIds.map(v=>clean(v)).filter(v=>/^\d{1,12}$/.test(v)))]:[];
   if(qru.length<2||qru.length>100)throw fail(400,"Informe a QRU (até 100 caracteres).");
   if(!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)||Number.isNaN(Date.parse(dateValue+"T12:00:00-03:00")))throw fail(400,"Informe uma data válida.");
-  if(!involved||involved.length>1500||!vehicle||vehicle.length>500)throw fail(400,"Preencha envolvidos e veículo.");
+  if(!involvedIds.length||involvedIds.length>20||!vehicle||vehicle.length>500)throw fail(400,"Selecione de 1 a 20 envolvidos e preencha o veículo.");
   if(!/^https:\/\/\S+$/i.test(photoUrl)||photoUrl.length>1000)throw fail(400,"Informe um link HTTPS válido para a foto/evidência.");
+  const involvedResult=await pool.query("SELECT passport_id,full_name FROM users WHERE access_status='APROVADO' AND status='Ativo' AND passport_id::text=ANY($1::text[])",[involvedIds]);
+  if(involvedResult.rowCount!==involvedIds.length)throw fail(400,"Um ou mais envolvidos não estão cadastrados como integrantes ativos. Faça a busca novamente.");
+  const involvedById=new Map(involvedResult.rows.map(p=>[String(p.passport_id),p]));
+  const involved=involvedIds.map(id=>{const p=involvedById.get(id);return `${p.full_name} — ID ${p.passport_id}`}).join("\n");
+  if(involved.length>1500)throw fail(400,"A lista de envolvidos ficou muito longa. Selecione menos integrantes.");
   await c.query("BEGIN");
   const saved=await c.query(`INSERT INTO operational_records(reporter_user_id,reporter_passport_id,reporter_name,record_type,qru,occurred_at,description,involved,vehicle,photo_url)
    VALUES($1,$2,$3,'QRU',$4,$5,'',$6,$7,$8) RETURNING *`,
@@ -127,7 +136,7 @@ app.post("/api/operational-records",auth,async(q,s,n)=>{const c=await pool.conne
    {name:"Piloto",value:`${record.reporter_name} — ID ${record.reporter_passport_id}`,inline:false},
    {name:"Data",value:new Date(record.occurred_at).toLocaleDateString("pt-BR",{timeZone:"America/Sao_Paulo"}),inline:true},
    {name:"QRU",value:record.qru,inline:true},
-   {name:"Envolvidos",value:record.involved.slice(0,1024),inline:false},
+   {name:"Envolvidos",value:record.involved.length>1024?record.involved.slice(0,1000)+"\n… lista completa salva no portal":record.involved,inline:false},
    {name:"Veículo",value:record.vehicle.slice(0,1024),inline:false}
   ];
   const resp=await fetch(webhook,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:"GTM Villa | Registro Operacional",embeds:[{title:"🚨 Novo Registro de QRU",color:0x5e6873,fields,image:{url:record.photo_url},timestamp:new Date(record.created_at).toISOString(),footer:{text:`Registro GTM #${record.id}`}}]})});

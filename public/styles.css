@@ -276,3 +276,23 @@ button,.btn,input,select,textarea{accent-color:#aab6c0}
 
 /* Estado visual de envio para impedir cliques repetidos no cadastro */
 #register button:disabled{opacity:.62;cursor:wait;filter:saturate(.65)}
+
+
+/* Busca e seleção de envolvidos no registro de QRU */
+.qru-people-results{display:flex;flex-direction:column;gap:6px;margin-top:9px;max-height:260px;overflow:auto;border:1px solid #303a44;border-radius:10px;background:rgba(8,11,14,.72);padding:7px}
+.qru-search-hint{margin:0;padding:12px;color:#8996a2;font-size:.78rem;line-height:1.5}
+.qru-person-result{display:flex;align-items:center;gap:11px;width:100%;padding:10px;border:1px solid transparent;border-radius:8px;background:transparent;color:#e6ebef;text-align:left;cursor:pointer}
+.qru-person-result:hover{background:#202832;border-color:#3b4855}
+.qru-person-avatar{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:9px;background:#26313b;border:1px solid #3d4b58;color:#e4ebf1;font-weight:800}
+.qru-person-details{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.qru-person-details b{font-size:.82rem;overflow-wrap:anywhere}
+.qru-person-details small{font-size:.7rem;color:#93a0ac}
+.qru-person-add{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:#26313b;color:#f1f4f7;font-size:1.25rem}
+.qru-selected-people{display:flex;flex-wrap:wrap;gap:8px;margin:11px 0 17px;min-height:30px}
+.qru-person-chip{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;border:1px solid #3d6555;border-radius:10px;background:rgba(30,83,61,.25);max-width:100%}
+.qru-person-chip>span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.qru-person-chip b{font-size:.78rem;overflow-wrap:anywhere;color:#e5f5ec}
+.qru-person-chip small{font-size:.68rem;color:#a6c9b7}
+.qru-person-chip button{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;border:1px solid #52685c;border-radius:7px;background:#1a2c23;color:#e8f3ec;font-size:1.15rem;cursor:pointer}
+.qru-empty-selected{align-self:center;color:#8996a2;font-size:.76rem}
+#v-qru #qruPeopleSearch{margin-top:7px}

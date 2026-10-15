@@ -41,3 +41,15 @@ O Dashboard apresenta Hero Banner, quatro indicadores (o cartão de cadastros pe
 - Exportação CSV compatível com Excel, com ID, patente, cargo, horários, duração e situação.
 - Duração de jornadas abertas calculada até o momento da consulta; datas interpretadas no fuso `America/Sao_Paulo`.
 - Backend protege os endpoints de consulta e exportação usando a autorização de gestão existente. Não exige novas tabelas ou migração.
+
+
+## Health check e monitoramento externo
+- `GET /api/health`: verificação leve de vida do processo, responde HTTP 200 sem depender do banco. O Render usa este caminho em `healthCheckPath`.
+- `GET /api/ready`: verifica a conexão com PostgreSQL; responde 200 quando conectado e 503 quando indisponível.
+- Para reduzir o tempo dormindo no plano Free, configure um monitor externo HTTP(s) para acessar `https://SEU-SITE.onrender.com/api/health` a cada 5 minutos. O plano gratuito do UptimeRobot oferece esse intervalo.
+- Configure alertas por e-mail no monitor para saber quando houver falha.
+- Importante: monitoramento externo ajuda a manter tráfego chegando e detectar quedas, mas não garante 100% de disponibilidade. O Render Free pode reiniciar serviços e tem limitações; disponibilidade contínua garantida exige um plano sempre ativo.
+
+## Registro de QRU — seleção de envolvidos
+
+O formulário de QRU agora permite pesquisar integrantes ativos já aprovados no portal por nome ou ID, selecionar vários envolvidos e removê-los antes do envio. O servidor valida os IDs contra o banco de dados e monta o campo **Envolvidos** com nome e ID de cada integrante. O embed do Discord recebe essa lista automaticamente; se ela ultrapassar o limite de um campo do Discord, a lista completa continua salva no histórico do portal. Não é necessária alteração manual no banco de dados.
