@@ -16,3 +16,7 @@ Mantenha a estrutura de pastas e publique os arquivos no repositório conectado 
 - No Relatório de Jornada, Administrador, Comandante e Subcomandante podem usar **Fechar ponto** nas jornadas que ainda estão abertas.
 - A saída é registrada com a data e hora atuais. A ação pede confirmação e gera registro de auditoria com o responsável e o integrante afetado.
 - O endpoint de encerramento exige permissão de gestão no servidor; usuários comuns não podem encerrar jornadas de outras pessoas.
+
+## Favicon G.T.M.
+- O favicon e o ícone de tela inicial usam o brasão `public/gtm-emblem.webp`.
+- A referência está no `<head>` de `public/index.html`; o parâmetro de versão ajuda a atualizar o cache do navegador.
