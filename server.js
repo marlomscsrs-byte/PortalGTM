@@ -11,13 +11,16 @@ const roles=["Comandante", "Subcomandante", "Supervisor", "Capitão", "Piloto Ve
 const ranks=["Recruta","Soldado","Cabo","3SGT","2SGT","1SGT","Subtenente","Aspirante a Oficial","2º Tenente","1º Tenente","Capitão","Major","Tenente-Coronel","Coronel"];
 const clean=v=>String(v??"").trim(), me=req=>req.session.user;
 const ADMIN_ID=clean(process.env.ADMIN_ID||"284");
-const commandRoles=["Comandante","Subcomandante"];
-const canManageUser=u=>!!u&&(u.isAdmin||commandRoles.includes(u.role));
+const commandRoles=["comandante","subcomandante"];
+// Normaliza variações de escrita do cargo para evitar negar acesso por diferenças
+// de caixa, acentos, espaços ou hífens nos cadastros antigos.
+const normalizeRole=value=>{const role=clean(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\s_-]+/g,"");return role==="subcomando"?"subcomandante":role;};
+const canManageUser=u=>!!u&&(u.isAdmin||commandRoles.includes(normalizeRole(u.role)));
 function fail(status,message){const e=new Error(message);e.status=status;return e}
 function auth(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});next()}
 function admin(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});if(!me(req).isAdmin)return res.status(403).json({error:"Acesso restrito ao administrador do sistema."});next()}
-function commandAccess(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});if(!canManageUser(me(req)))return res.status(403).json({error:"Ação restrita ao Comando, Subcomando e administrador do sistema."});next()}
-function publicUser(r){const isAdmin=String(r.passport_id)===ADMIN_ID;return {id:r.id,passportId:r.passport_id,fullName:r.full_name,phone:r.phone||"",badge:r.badge||"",rank:r.rank||"",role:r.role,status:r.status,isAdmin,canManage:isAdmin||commandRoles.includes(r.role)}}
+async function commandAccess(req,res,next){try{if(!me(req))return res.status(401).json({error:"Faça login para continuar."});const current=await pool.query("SELECT * FROM users WHERE passport_id=$1 AND access_status='APROVADO' AND status='Ativo'",[me(req).passportId]);if(!current.rowCount){req.session.user=null;return res.status(401).json({error:"Sessão inválida. Entre novamente."});}req.session.user=publicUser(current.rows[0]);if(!canManageUser(req.session.user))return res.status(403).json({error:"Ação restrita ao Comandante, Subcomandante e administrador do sistema. Confira se seu cargo está atualizado e entre novamente."});next();}catch(e){next(e)}}
+function publicUser(r){const isAdmin=String(r.passport_id)===ADMIN_ID;return {id:r.id,passportId:r.passport_id,fullName:r.full_name,phone:r.phone||"",badge:r.badge||"",rank:r.rank||"",role:r.role,status:r.status,isAdmin,canManage:isAdmin||commandRoles.includes(normalizeRole(r.role))}}
 async function audit(client,user,action,target,details={}){await client.query("INSERT INTO audit_log(actor_user_id,action,target_passport_id,details) VALUES($1,$2,$3,$4)",[user||null,action,target||null,JSON.stringify(details)])}
 async function bootstrap(){
  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) NOT NULL DEFAULT ''");
@@ -191,7 +194,7 @@ app.get("/api/admin/access-requests",commandAccess,async(q,s,n)=>{try{const r=aw
 app.post("/api/admin/access-requests/:id/review",commandAccess,async(q,s,n)=>{const c=await pool.connect();try{
  const id=Number(q.params.id),decision=clean(q.body.decision).toUpperCase(),note=clean(q.body.note);if(!Number.isInteger(id)||!["APROVADO","REJEITADO"].includes(decision))throw fail(400,"Solicitação inválida.");
  await c.query("BEGIN");const found=await c.query("SELECT * FROM access_requests WHERE id=$1 FOR UPDATE",[id]);if(!found.rowCount||found.rows[0].status!=="PENDENTE")throw fail(409,"Solicitação já analisada ou não encontrada.");
- const r=found.rows[0];if(decision==="APROVADO"&&["Comandante","Subcomandante"].includes(r.requested_role)&&!me(q).isAdmin)throw fail(403,"Somente o administrador do sistema pode aprovar os cargos de Comandante ou Subcomandante.");if(decision==="APROVADO"){
+ const r=found.rows[0];if(decision==="APROVADO"&&["comandante","subcomandante"].includes(normalizeRole(r.requested_role))&&!me(q).isAdmin)throw fail(403,"Somente o administrador do sistema pode aprovar os cargos de Comandante ou Subcomandante.");if(decision==="APROVADO"){
  const old=await c.query("SELECT id FROM users WHERE passport_id=$1 FOR UPDATE",[r.passport_id]);
  if(old.rowCount)await c.query("UPDATE users SET full_name=$2,role=$3,status='Ativo',password_hash=$4,access_status='APROVADO',approved_at=NOW(),approved_by=$5,updated_at=NOW() WHERE passport_id=$1",[r.passport_id,r.full_name,r.requested_role,r.password_hash,q.session.user.id]);
  else await c.query("INSERT INTO users(passport_id,full_name,role,status,password_hash,is_admin,access_status,requested_at,approved_at,approved_by,entry_date) VALUES($1,$2,$3,'Ativo',$4,FALSE,'APROVADO',$5,NOW(),$6,CURRENT_DATE)",[r.passport_id,r.full_name,r.requested_role,r.password_hash,r.requested_at,q.session.user.id]);
