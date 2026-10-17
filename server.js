@@ -20,7 +20,7 @@ function fail(status,message){const e=new Error(message);e.status=status;return 
 function auth(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});next()}
 function admin(req,res,next){if(!me(req))return res.status(401).json({error:"Faça login para continuar."});if(!me(req).isAdmin)return res.status(403).json({error:"Acesso restrito ao administrador do sistema."});next()}
 async function commandAccess(req,res,next){try{if(!me(req))return res.status(401).json({error:"Faça login para continuar."});const current=await pool.query("SELECT * FROM users WHERE passport_id=$1 AND access_status='APROVADO' AND status='Ativo'",[me(req).passportId]);if(!current.rowCount){req.session.user=null;return res.status(401).json({error:"Sessão inválida. Entre novamente."});}req.session.user=publicUser(current.rows[0]);if(!canManageUser(req.session.user))return res.status(403).json({error:"Ação restrita ao Comandante, Subcomandante e administrador do sistema. Confira se seu cargo está atualizado e entre novamente."});next();}catch(e){next(e)}}
-function publicUser(r){const isAdmin=String(r.passport_id)===ADMIN_ID;return {id:r.id,passportId:r.passport_id,fullName:r.full_name,phone:r.phone||"",badge:r.badge||"",rank:r.rank||"",role:r.role,status:r.status,isAdmin,canManage:isAdmin||commandRoles.includes(normalizeRole(r.role))}}
+function publicUser(r){const isAdmin=String(r.passport_id)===ADMIN_ID||r.is_admin===true;return {id:r.id,passportId:r.passport_id,fullName:r.full_name,phone:r.phone||"",badge:r.badge||"",rank:r.rank||"",role:r.role,status:r.status,isAdmin,canManage:isAdmin||commandRoles.includes(normalizeRole(r.role))}}
 async function audit(client,user,action,target,details={}){await client.query("INSERT INTO audit_log(actor_user_id,action,target_passport_id,details) VALUES($1,$2,$3,$4)",[user||null,action,target||null,JSON.stringify(details)])}
 async function bootstrap(){
  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) NOT NULL DEFAULT ''");
@@ -50,7 +50,7 @@ async function bootstrap(){
  FROM ranked r WHERE a.id=r.id AND r.rn>1`);
  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_access_requests_one_pending_per_passport ON access_requests(passport_id) WHERE status='PENDENTE'");
  const id=ADMIN_ID,name=clean(process.env.ADMIN_NAME||"Administrador GTM"),password=clean(process.env.ADMIN_PASSWORD);
- await pool.query("UPDATE users SET is_admin=(passport_id=$1)",[id]);
+ await pool.query("UPDATE users SET is_admin=TRUE WHERE passport_id=$1",[id]);
  if(!id||!password||password.startsWith("troque-")){console.warn("Configure ADMIN_ID e ADMIN_PASSWORD forte para criar o primeiro administrador.");return}
  const exists=await pool.query("SELECT id FROM users WHERE passport_id=$1",[id]);if(exists.rowCount)return;
  await pool.query("INSERT INTO users(passport_id,full_name,rank,role,status,password_hash,is_admin,access_status,approved_at,entry_date) VALUES($1,$2,'Administração','Comandante','Ativo',$3,TRUE,'APROVADO',NOW(),CURRENT_DATE)",[id,name,await bcrypt.hash(password,12)]);
@@ -107,20 +107,21 @@ app.get("/api/dashboard",auth,async(q,s,n)=>{try{
 }catch(e){n(e)}});
 app.get("/api/people",auth,async(q,s,n)=>{try{
  const term="%"+clean(q.query.q)+"%",status=clean(q.query.status);
- const r=await pool.query(`SELECT id,passport_id,full_name,badge,rank,role,status,entry_date FROM users WHERE access_status='APROVADO' AND (full_name ILIKE $1 OR passport_id ILIKE $1 OR role ILIKE $1) AND ($2='' OR status=$2) ORDER BY CASE role WHEN 'Comandante' THEN 1 WHEN 'Subcomandante' THEN 2 WHEN 'Supervisor' THEN 3 WHEN 'Capitão' THEN 4 WHEN 'Piloto Veterano' THEN 5 WHEN 'Piloto Oficial' THEN 6 WHEN 'Piloto Probatório' THEN 7 ELSE 8 END,full_name`,[term,status]);s.json({people:r.rows});
+ const r=await pool.query(`SELECT id,passport_id,full_name,badge,rank,role,status,entry_date,is_admin FROM users WHERE access_status='APROVADO' AND (full_name ILIKE $1 OR passport_id ILIKE $1 OR role ILIKE $1) AND ($2='' OR status=$2) ORDER BY CASE role WHEN 'Comandante' THEN 1 WHEN 'Subcomandante' THEN 2 WHEN 'Supervisor' THEN 3 WHEN 'Capitão' THEN 4 WHEN 'Piloto Veterano' THEN 5 WHEN 'Piloto Oficial' THEN 6 WHEN 'Piloto Probatório' THEN 7 ELSE 8 END,full_name`,[term,status]);s.json({people:r.rows});
 }catch(e){n(e)}});
 
 app.put("/api/people/:passportId",commandAccess,async(q,s,n)=>{try{
- const target=clean(q.params.passportId),fullName=clean(q.body.fullName),rank=clean(q.body.rank),role=clean(q.body.role),status=clean(q.body.status),entryDate=clean(q.body.entryDate);
+ const target=clean(q.params.passportId),fullName=clean(q.body.fullName),rank=clean(q.body.rank),role=clean(q.body.role),status=clean(q.body.status),entryDate=clean(q.body.entryDate),grantAdmin=q.body.isAdmin===true;
  if(!/^\d{1,12}$/.test(target))throw fail(400,"ID inválido.");
  if(target===ADMIN_ID&&!me(q).isAdmin)throw fail(403,"Somente o administrador ID configurado no Render pode editar o próprio perfil administrativo.");
  if(fullName.length<2||fullName.length>120)throw fail(400,"Informe um nome entre 2 e 120 caracteres.");
  if(!roles.includes(role))throw fail(400,"Cargo inválido.");
+ if(!me(q).isAdmin&&q.body.isAdmin!==undefined)throw fail(403,"Somente um administrador pode conceder ou remover o cargo de administrador.");
  if(!["Ativo","Inativo","Afastado"].includes(status))throw fail(400,"Status inválido.");
  if(entryDate&&!/^\d{4}-\d{2}-\d{2}$/.test(entryDate))throw fail(400,"Data de entrada inválida.");
  if(!me(q).isAdmin&&(role==="Comandante"||role==="Subcomandante"))throw fail(403,"Somente o administrador do sistema pode atribuir os cargos de Comandante ou Subcomandante.");
  const c=await pool.connect();try{await c.query("BEGIN");const old=await c.query("SELECT id,role FROM users WHERE passport_id=$1 AND access_status='APROVADO' FOR UPDATE",[target]);if(!old.rowCount)throw fail(404,"Integrante não encontrado.");if(!me(q).isAdmin&&["Comandante","Subcomandante"].includes(old.rows[0].role))throw fail(403,"Somente o administrador do sistema pode alterar os perfis do Comando.");
- const updated=await c.query("UPDATE users SET full_name=$2,rank=$3,role=$4,status=$5,entry_date=CASE WHEN $6='' THEN entry_date ELSE $6::date END,updated_at=NOW(),is_admin=(passport_id=$7) WHERE passport_id=$1 RETURNING passport_id,full_name,rank,role,status,entry_date",[target,fullName,rank,role,status,entryDate,ADMIN_ID]);
+ const updated=await c.query("UPDATE users SET full_name=$2,rank=$3,role=$4,status=$5,entry_date=CASE WHEN $6='' THEN entry_date ELSE $6::date END,updated_at=NOW(),is_admin=CASE WHEN passport_id=$7 THEN TRUE WHEN $8::boolean THEN TRUE WHEN $9::boolean THEN FALSE ELSE is_admin END WHERE passport_id=$1 RETURNING passport_id,full_name,rank,role,status,entry_date,is_admin",[target,fullName,rank,role,status,entryDate,ADMIN_ID,grantAdmin,q.body.isAdmin===false]);
  await audit(c,me(q).id,"PERFIL_EDITADO",target,{role,status});await c.query("COMMIT");s.json({message:"Perfil atualizado.",person:updated.rows[0]});}catch(e){await c.query("ROLLBACK").catch(()=>{});throw e}finally{c.release()}
  }catch(e){n(e)}});
 
