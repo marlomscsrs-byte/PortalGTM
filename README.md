@@ -20,3 +20,11 @@ Versão com ajustes de jornada no Relatório de Jornada.
 - `node --check public/app.js`
 
 Não foi possível testar ações reais contra o banco de produção nesta sessão. Faça uma verificação com uma conta de gestão e um ponto de teste após o deploy.
+
+
+## Recuperação de senha
+- Na tela de login, clique em **Esqueci minha senha** e informe ID/Passaporte e nome completo.
+- O pedido aparece em **Aprovações → Recuperação de senha** para administrador, Comandante e Subcomandante.
+- Ao validar, o sistema mostra um código temporário de uso único válido por 30 minutos. Entregue-o ao integrante por canal privado.
+- O integrante seleciona **Já tenho um código**, informa o ID, o código e a nova senha.
+- A tabela de recuperação é criada automaticamente no banco PostgreSQL já configurado; nenhuma variável nova no Render é necessária.

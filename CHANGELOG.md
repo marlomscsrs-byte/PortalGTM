@@ -17,3 +17,10 @@
 - Minha jornada agora mostra status e duração do turno atualizada a cada minuto.
 - Adicionados atalhos para QRU, Hierarquia, Manual de Conduta e Material de Apoio.
 - Ajustes responsivos para desktop, tablet e celular.
+
+## Recuperação de senha
+- Adicionado fluxo “Esqueci minha senha” com validação de ID e nome completo.
+- Solicitações visíveis na área Aprovações para administrador, Comandante e Subcomandante.
+- Código temporário aleatório, armazenado somente como hash, válido por 30 minutos e de uso único.
+- Redefinição com hash bcrypt e requisitos de senha equivalentes ao cadastro.
+- Auditoria das decisões administrativas; tabela criada automaticamente no PostgreSQL existente.

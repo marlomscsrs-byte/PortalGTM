@@ -1,5 +1,5 @@
 require("dotenv").config();
-const express=require("express"),session=require("express-session"),PgSession=require("connect-pg-simple")(session);
+const express=require("express"),session=require("express-session"),PgSession=require("connect-pg-simple")(session),crypto=require("crypto");
 const {Pool}=require("pg"),bcrypt=require("bcryptjs"),helmet=require("helmet"),path=require("path");
 const app=express(),port=Number(process.env.PORT||3000);
 if(!process.env.DATABASE_URL||!process.env.SESSION_SECRET){console.error("Configure DATABASE_URL e SESSION_SECRET.");process.exit(1);}
@@ -22,6 +22,8 @@ async function audit(client,user,action,target,details={}){await client.query("I
 async function bootstrap(){
  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) NOT NULL DEFAULT ''");
  await pool.query("CREATE TABLE IF NOT EXISTS user_sessions(sid varchar NOT NULL PRIMARY KEY,sess json NOT NULL,expire timestamp(6) NOT NULL); CREATE INDEX IF NOT EXISTS idx_session_expire ON user_sessions(expire)");
+ await pool.query(`CREATE TABLE IF NOT EXISTS password_reset_requests (id BIGSERIAL PRIMARY KEY, passport_id VARCHAR(32) NOT NULL, full_name VARCHAR(120) NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE', token_hash TEXT, expires_at TIMESTAMPTZ, requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), reviewed_at TIMESTAMPTZ, reviewed_by BIGINT REFERENCES users(id) ON DELETE SET NULL, used_at TIMESTAMPTZ)`);
+ await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_password_reset_one_pending ON password_reset_requests(passport_id) WHERE status='PENDENTE'");
  await pool.query(`CREATE TABLE IF NOT EXISTS operational_records(
   id BIGSERIAL PRIMARY KEY, reporter_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
   reporter_passport_id VARCHAR(32) NOT NULL, reporter_name VARCHAR(120) NOT NULL,
@@ -67,6 +69,22 @@ app.post("/api/auth/register",async(q,s,n)=>{try{
  await pool.query("INSERT INTO access_requests(passport_id,full_name,requested_role,password_hash) VALUES($1,$2,$3,$4)",[id,name,role,await bcrypt.hash(pass,12)]);
  s.status(201).json({message:"Solicitação enviada. Aguarde a aprovação."});
 }catch(e){if(e.code==="23505")return s.status(409).json({error:"Já existe uma solicitação pendente para este ID. Não é necessário enviar novamente."});n(e)}});
+app.post("/api/auth/password-reset/request",async(q,s,n)=>{try{
+ const id=clean(q.body.passportId),name=clean(q.body.fullName);
+ if(!/^\d{1,12}$/.test(id)||name.length<2||name.length>120)throw fail(400,"Informe um ID válido e seu nome completo.");
+ const found=await pool.query("SELECT id FROM users WHERE passport_id=$1 AND full_name ILIKE $2 AND access_status='APROVADO'",[id,name]);
+ if(!found.rowCount)throw fail(404,"Não encontramos um cadastro aprovado com esse ID e nome. Confira os dados ou procure o Comando.");
+ await pool.query("INSERT INTO password_reset_requests(passport_id,full_name) VALUES($1,$2)",[id,name]);
+ s.status(201).json({message:"Solicitação enviada ao Comando. Aguarde a validação para receber o código de redefinição."});
+}catch(e){if(e.code==="23505")return s.status(409).json({error:"Já existe uma solicitação de recuperação pendente para esse ID."});n(e)}});
+app.post("/api/auth/password-reset/complete",async(q,s,n)=>{try{
+ const id=clean(q.body.passportId),token=clean(q.body.token).toUpperCase(),pass=String(q.body.password||"");
+ if(!/^\d{1,12}$/.test(id)||! /^[A-F0-9]{12}$/.test(token))throw fail(400,"ID ou código de recuperação inválido.");
+ if(pass.length<8||!/[A-Z]/.test(pass)||!/[a-z]/.test(pass)||!/[0-9]/.test(pass))throw fail(400,"A senha deve ter no mínimo 8 caracteres, maiúscula, minúscula e número.");
+ const tokenHash=crypto.createHash("sha256").update(token).digest("hex"),c=await pool.connect();try{await c.query("BEGIN");const r=await c.query("SELECT * FROM password_reset_requests WHERE passport_id=$1 AND status='APROVADO' AND token_hash=$2 AND expires_at>NOW() AND used_at IS NULL ORDER BY reviewed_at DESC LIMIT 1 FOR UPDATE",[id,tokenHash]);if(!r.rowCount)throw fail(400,"Código inválido ou expirado. Solicite uma nova recuperação ao Comando.");
+ const u=await c.query("UPDATE users SET password_hash=$2,updated_at=NOW() WHERE passport_id=$1 AND access_status='APROVADO' RETURNING id",[id,await bcrypt.hash(pass,12)]);if(!u.rowCount)throw fail(404,"Conta não encontrada.");await c.query("UPDATE password_reset_requests SET status='USADO',used_at=NOW() WHERE id=$1",[r.rows[0].id]);await c.query("UPDATE password_reset_requests SET status='EXPIRADO' WHERE passport_id=$1 AND status='APROVADO'",[id]);await c.query("COMMIT");s.json({message:"Senha redefinida com sucesso. Você já pode entrar com a nova senha."});
+ }catch(e){await c.query("ROLLBACK").catch(()=>{});throw e}finally{c.release()}
+}catch(e){n(e)}});
 app.post("/api/auth/login",async(q,s,n)=>{try{
  const r=await pool.query("SELECT * FROM users WHERE passport_id=$1",[clean(q.body.passportId)]);
  if(!r.rowCount||!r.rows[0].password_hash||!(await bcrypt.compare(String(q.body.password||""),r.rows[0].password_hash)))throw fail(401,"ID ou senha incorretos.");
@@ -181,5 +199,7 @@ app.post("/api/admin/access-requests/:id/review",commandAccess,async(q,s,n)=>{co
  await c.query("UPDATE access_requests SET status=$2,reviewed_at=NOW(),reviewed_by=$3,review_note=$4 WHERE id=$1",[id,decision,q.session.user.id,note]);await audit(c,q.session.user.id,"CADASTRO_"+decision,r.passport_id,{role:r.requested_role,note});await c.query("COMMIT");
  s.json({message:decision==="APROVADO"?"Aprovado e adicionado ao efetivo.":"Solicitação rejeitada."});
 }catch(e){await c.query("ROLLBACK").catch(()=>{});n(e)}finally{c.release()}});
+app.get("/api/admin/password-reset-requests",commandAccess,async(q,s,n)=>{try{const r=await pool.query("SELECT id,passport_id,full_name,requested_at FROM password_reset_requests WHERE status='PENDENTE' ORDER BY requested_at");s.json({requests:r.rows})}catch(e){n(e)}});
+app.post("/api/admin/password-reset-requests/:id/review",commandAccess,async(q,s,n)=>{const c=await pool.connect();try{const id=Number(q.params.id),decision=clean(q.body.decision).toUpperCase();if(!Number.isSafeInteger(id)||id<1||!["APROVADO","REJEITADO"].includes(decision))throw fail(400,"Solicitação inválida.");await c.query("BEGIN");const found=await c.query("SELECT * FROM password_reset_requests WHERE id=$1 FOR UPDATE",[id]);if(!found.rowCount||found.rows[0].status!=="PENDENTE")throw fail(409,"Solicitação já analisada ou não encontrada.");const row=found.rows[0];let token=null;if(decision==="APROVADO"){const u=await c.query("SELECT id FROM users WHERE passport_id=$1 AND full_name ILIKE $2 AND access_status='APROVADO' AND status='Ativo'",[row.passport_id,row.full_name]);if(!u.rowCount)throw fail(404,"Não foi possível validar o integrante ativo.");token=crypto.randomBytes(6).toString("hex").toUpperCase();const hash=crypto.createHash("sha256").update(token).digest("hex");await c.query("UPDATE password_reset_requests SET status='EXPIRADO' WHERE passport_id=$1 AND status='APROVADO'",[row.passport_id]);await c.query("UPDATE password_reset_requests SET status='APROVADO',token_hash=$2,expires_at=NOW()+INTERVAL '30 minutes',reviewed_at=NOW(),reviewed_by=$3 WHERE id=$1",[id,hash,q.session.user.id]);}else await c.query("UPDATE password_reset_requests SET status='REJEITADO',reviewed_at=NOW(),reviewed_by=$2 WHERE id=$1",[id,q.session.user.id]);await audit(c,q.session.user.id,"RECUPERACAO_SENHA_"+decision,row.passport_id,{requestId:id});await c.query("COMMIT");s.json({message:decision==="APROVADO"?"Solicitação validada. Entregue o código ao integrante por canal privado; ele expira em 30 minutos.":"Solicitação de recuperação rejeitada.",token});}catch(e){await c.query("ROLLBACK").catch(()=>{});n(e)}finally{c.release()}});
 app.use("/api",(e,q,s,n)=>{console.error(e);s.status(e.status||500).json({error:e.status?e.message:"Erro interno do servidor."})});
 (async()=>{await bootstrap();app.listen(port,()=>console.log("Portal GTM na porta "+port))})().catch(e=>{console.error(e);process.exit(1)});
