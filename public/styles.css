@@ -305,3 +305,9 @@ button,.btn,input,select,textarea{accent-color:#aab6c0}
 #clockAdjustmentsBody td:last-child{min-width:200px;max-width:360px;overflow-wrap:anywhere}
 #reloadClockAdjustments{width:auto;margin:0}
 @media(max-width:650px){#clockReportEntries .actions{min-width:190px}}
+
+
+/* Imagens restauradas do Manual de Conduta GTM */
+.manual-figure{margin:18px 0 22px;padding:12px;border:1px solid var(--line, #2d3748);border-radius:12px;background:rgba(255,255,255,.025)}
+.manual-figure img{display:block;width:100%;max-width:760px;max-height:560px;object-fit:contain;margin:0 auto;border-radius:8px}
+.manual-figure figcaption{text-align:center;margin-top:10px;font-size:.9rem;opacity:.85}
